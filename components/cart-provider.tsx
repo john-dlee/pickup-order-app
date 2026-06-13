@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useState, useMemo, useContext } from 'react';
+import { createContext, useState, useMemo, useContext, useEffect } from 'react';
 
 export type CartItem = {
   id: string;
@@ -18,11 +18,27 @@ type CartContextValue = {
   totalCents: number;
 }
 
+const CART_STORAGE_KEY = "pickup_cart";
+
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode}) {
   const [items, setItems] = useState<CartItem[]>([]);
-  // functions go here
+  const [hasLoaded, setHasLoaded] = useState(false);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
+    if (saved) {
+      setItems(JSON.parse(saved));
+    }
+    setHasLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items, hasLoaded]);
+
   const addItem = (item: Omit<CartItem, "quantity">) => {
     setItems((prevItems) => {
       const existingItem = prevItems.find((i) => i.id === item.id);
