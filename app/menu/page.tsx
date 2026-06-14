@@ -1,4 +1,6 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
+import MenuItemRow from '@/components/menu-item-row';
+import CartSheet from '@/components/cart-sheet';
 
 export default async function MenuPage() {
   const supabase = createSupabaseClient();
@@ -17,12 +19,16 @@ export default async function MenuPage() {
   return (
     <main>
       <h1>Menu</h1>
+      <CartSheet />
       <ul>
-      {items.map((item) => (
-        <li key={item.id}>
-          {item.name} - ${(item.price_cents / 100).toFixed(2)}
-        </li>
-      ))}
+        {items.map((item) => (
+          <MenuItemRow 
+            key={item.id}
+            id={item.id} 
+            name={item.name} 
+            price_cents={item.price_cents} 
+          />
+        ))}
       </ul>
     </main>
   );
