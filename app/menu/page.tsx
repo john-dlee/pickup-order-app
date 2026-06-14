@@ -1,6 +1,6 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
 import MenuItemRow from '@/components/menu-item-row';
-import CartSheet from '@/components/cart-sheet';
+import CheckoutBar from '@/components/checkout-bar';
 
 export default async function MenuPage() {
   const supabase = createSupabaseClient();
@@ -19,7 +19,7 @@ export default async function MenuPage() {
   return (
     <main>
       <h1>Menu</h1>
-      <CartSheet />
+      <CheckoutBar />
       <ul>
         {items.map((item) => (
           <MenuItemRow 

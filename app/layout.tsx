@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Quicksand } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/cart-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const quicksand = Quicksand({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-quicksand",
 });
 
 export const metadata: Metadata = {
@@ -26,10 +22,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+      className={`${quicksand.variable} h-full antialiased`}>
+      <body className="min-h-screen bg-[#F9F6F0] flex justify-center m-0 font-sans font-medium">
         <CartProvider>
-          {children}
+          <div className="w-full max-w-md min-h-screen bg-white relative pb-24 shadow-sm">
+            {children}
+          </div>
         </CartProvider>
       </body>
     </html>
