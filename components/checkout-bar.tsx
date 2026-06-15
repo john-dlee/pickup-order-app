@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useCart } from "@/components/cart-provider";
+import { formatDisplayPrice } from "@/lib/utils";
 
 export default function CartStickyBar() {
   const { updateItemQuantity, totalCents, items } = useCart();
   
   if (items.length === 0) return null;
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  
-  const formattedPrice = (totalCents / 100).toFixed(2);
 
   return (
     <>
@@ -17,7 +16,7 @@ export default function CartStickyBar() {
         <div className="w-full pointer-events-auto">
           <Link
             href="/cart"
-            className="w-full p-4 bg-[#A61C2E] text-white rounded-full flex justify-between items-center font-semibold shadow-lg transition-transform active:scale-95"
+            className="w-full p-4 bg-[#A61C2E] text-white rounded-lg flex justify-between items-center font-semibold shadow-lg transition-transform active:scale-95"
           >
             <div className="flex items-center gap-4">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#A61C2E] text-sm font-bold">
@@ -25,12 +24,12 @@ export default function CartStickyBar() {
               </span>
               <span>Checkout</span>
             </div>
-            <span>{formattedPrice}</span>
+            <span>{formatDisplayPrice(totalCents)}</span>
           </Link>
         </div>
       </div>
       <div className="mt-5 font-bold">
-        Subtotal: {formattedPrice}
+        Subtotal: {formatDisplayPrice(totalCents)}
       </div>
     </>
   );
