@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
 
-  // verify payload from Stripe
+  // Verify payload from Stripe
   try {
     event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
   }
@@ -88,7 +88,12 @@ export async function POST(request: Request) {
 
   for (const item of items) {
     const dbItem = dbItems.find((d) => d.id === item.id);
-    if (!dbItem) continue; // or return 400
+
+    if (!dbItem) {
+      console.error("Menu item missing at fulfillment", item.id);
+      return NextResponse.json({ error: "Menu item not found" }, { status: 500 });
+    }
+
     orderItemRows.push({
       menu_item_id: dbItem.id,
       item_name: dbItem.name,
@@ -101,7 +106,12 @@ export async function POST(request: Request) {
 
   for (const acc of accessories) {
     const defined = ACCESSORIES.find((a) => a.id === acc.id);
-    if (!defined) continue;
+
+    if (!defined) {
+      console.error("Accessory item missing at fulfillment", acc.id);
+      return NextResponse.json({ error: "Accessory item not found" }, { status: 500 });
+    }
+
     orderItemRows.push({
       menu_item_id: null,
       item_name: defined.name,
