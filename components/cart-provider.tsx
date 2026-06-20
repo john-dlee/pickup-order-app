@@ -84,6 +84,7 @@ export function CartProvider({ children }: { children: React.ReactNode}) {
   const clearCart = () => {
     setItems([]);
     setAccessoryQuantity({});
+    localStorage.removeItem(CART_STORAGE_KEY)
   };
 
   const updateAccessoryQuantity = (id: string, quantity: number) => {
