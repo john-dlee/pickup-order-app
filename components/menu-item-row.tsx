@@ -17,7 +17,7 @@ export default function MenuItemRow({ id, name, price_cents }: MenuItemRowProps)
   });
 
   return (
-    <div>
+    <div className="flex justify-between">
       <span>{name} - {formattedPrice}</span>
       <button onClick={() => addItem({ id, name, price_cents })}>
         Add to cart
