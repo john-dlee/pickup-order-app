@@ -1,35 +1,62 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
-import MenuItemRow from '@/components/menu-item-row';
-import CheckoutBar from '@/components/checkout-bar';
+import type { MenuCategory } from "@/lib/menu_types";
+import { MenuContent } from '@/components/menu/menu-content';
 
 export default async function MenuPage() {
   const supabase = createSupabaseClient();
-  const { data: items, error } = await supabase
+  const { data, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select(`
+      id, 
+      name, 
+      price_cents,
+      sort_order,
+      categories (
+        id,
+        name,
+        sort_order
+      )
+    `);
   
   if (error) {
     return <div>Error: {error.message}</div>;
   }
 
-  if (items.length === 0) {
+  if (!data?.length) {
     return <div>No items found</div>;
   }
 
-  return (
-    <main>
-      <h1>Menu</h1>
-      <CheckoutBar />
-      <ul>
-        {items.map((item) => (
-          <MenuItemRow 
-            key={item.id}
-            id={item.id} 
-            name={item.name} 
-            price_cents={item.price_cents} 
-          />
-        ))}
-      </ul>
-    </main>
-  );
+  const categoryMap = new Map<string, MenuCategory>();
+
+  for (const row of data) {
+    const cat = row.categories;
+
+    // change this later
+    if (!cat || Array.isArray(cat)) continue;
+
+    if (!categoryMap.has(cat.id)) {
+      categoryMap.set(cat.id, {
+        id: cat.id,
+        name: cat.name,
+        sort_order: cat.sort_order,
+        items: [],
+      });
+    }
+
+    categoryMap.get(cat.id)!.items.push({
+      id: row.id,
+      name: row.name,
+      price_cents: row.price_cents,
+      sort_order: row.sort_order,
+    });
+  }
+
+  const categories = [...categoryMap.values()]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((cat) => ({
+      ...cat,
+      items: cat.items.sort((a, b) => a.sort_order - b.sort_order),
+    }));
+  
+  return <MenuContent categories={categories} />;
 }
