@@ -18,6 +18,7 @@ type CartContextValue = {
   hasLoaded: boolean;
   removeItem: (id: string) => void;
   updateItemQuantity: (id: string, quantity: number) => void;
+  getItemQuantity: (id: string) => number;
   clearCart: () => void;
 
   // Accessories state
@@ -104,6 +105,9 @@ export function CartProvider({ children }: { children: React.ReactNode}) {
 
   const getAccessoryQuantity = (id: string) => (accessoryQuantity[id] ?? 0);
 
+  const getItemQuantity = (id: string) => 
+    items.find((i) => i.id === id)?.quantity ?? 0;
+
   const totalCents = useMemo(
     () => items.reduce((sum, i) => sum + i.price_cents * i.quantity, 0),
     [items]
@@ -125,6 +129,7 @@ export function CartProvider({ children }: { children: React.ReactNode}) {
     addItem, 
     removeItem, 
     updateItemQuantity, 
+    getItemQuantity,
     clearCart, 
     accessoryQuantity,
     updateAccessoryQuantity,
