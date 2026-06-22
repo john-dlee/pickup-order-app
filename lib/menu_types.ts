@@ -8,6 +8,7 @@ export type MenuItem = {
 export type MenuCategory = {
   id: string;
   name: string;
+  slug: string;
   sort_order: number;
   items: MenuItem[];
 }

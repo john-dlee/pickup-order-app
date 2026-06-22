@@ -1,6 +1,7 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
 import type { MenuCategory } from "@/lib/menu_types";
 import { MenuContent } from '@/components/menu/menu-content';
+import { assignCategorySlug } from '@/lib/category-slug';
 
 export default async function MenuPage() {
   const supabase = createSupabaseClient();
@@ -27,6 +28,7 @@ export default async function MenuPage() {
   }
 
   const categoryMap = new Map<string, MenuCategory>();
+  const usedSlugs = new Set<string>();
 
   for (const row of data) {
     const cat = row.categories;
@@ -38,6 +40,7 @@ export default async function MenuPage() {
       categoryMap.set(cat.id, {
         id: cat.id,
         name: cat.name,
+        slug: assignCategorySlug(cat.name, cat.id, usedSlugs),
         sort_order: cat.sort_order,
         items: [],
       });
