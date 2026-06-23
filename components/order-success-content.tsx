@@ -4,7 +4,7 @@ import { ClearCartOnMount } from "@/components/clear-cart-on-mount";
 import { useEffect, useState } from "react";
 
 type Order = {
-  daily_order_number: number;
+  daily_order_number: number | null;
   pickup_at: string;
   customer_name: string;
   status: string;
@@ -75,7 +75,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
     <main className="mx-auto max-w-md p-6 text-center">
       <ClearCartOnMount />
       <h1 className="text-xl font-bold">Payment received</h1>
-      <p className="mt-4 text-3xl font-bold">Order #{order.daily_order_number}</p>
+      <p className="mt-4 text-3xl font-bold">Order #{order.daily_order_number ?? "-"}</p>
       <p className="mt-2 text-sm text-gray-600">
         Thanks {order.customer_name} — we&apos;re preparing your order.
       </p>

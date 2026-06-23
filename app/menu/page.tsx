@@ -33,8 +33,7 @@ export default async function MenuPage() {
   for (const row of data) {
     const cat = row.categories;
 
-    // change this later
-    if (!cat || Array.isArray(cat)) continue;
+    if (!cat) continue;
 
     if (!categoryMap.has(cat.id)) {
       categoryMap.set(cat.id, {

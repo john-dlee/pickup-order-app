@@ -3,7 +3,6 @@ import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import Stripe from "stripe";
 
 const supabase = createSupabaseServerClient();
 
@@ -15,6 +14,17 @@ type CheckoutBody = {
   items: CheckoutItem[];
   accessories: CheckoutAccessory[];
 };
+
+function toStripeLineItem(name: string, unitAmountCents: number, quantity: number) {
+  return {
+    quantity,
+    price_data: {
+      currency: "aud" as const,
+      unit_amount: unitAmountCents,
+      product_data: { name },
+    },
+  };
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -39,7 +49,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Cart cannot be empty" }, { status: 400 });
     }
 
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    //const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    const lineItems: ReturnType<typeof toStripeLineItem>[] = [];
 
     for (const clientAcc of accessories) {
       const validAccessory = ACCESSORIES.find((a) => a.id === clientAcc.id);
@@ -121,15 +132,4 @@ export async function POST(request: Request) {
     console.log(err);
     return NextResponse.json({ error: "Checkout failed. Please try again." }, { status: 500 });
   }
-}
-
-function toStripeLineItem(name: string, unitAmountCents: number, quantity: number) {
-  return {
-    quantity,
-    price_data: {
-      currency: "aud" as const,
-      unit_amount: unitAmountCents,
-      product_data: { name },
-    },
-  };
 }

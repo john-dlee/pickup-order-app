@@ -10,7 +10,7 @@ const supabase = createSupabaseClient();
 
 type Order = {
   id: string;
-  daily_order_number: number;
+  daily_order_number: number | null;
   customer_name: string;
   customer_phone: string;
   created_at: string;
@@ -204,7 +204,7 @@ export default function AdminOrdersPage() {
         const extras = order.order_items.filter((item) => item.is_accessory);
         return (
         <div key={order.id} className="mt-4 rounded border p-4">
-          <p className="text-2xl font-bold">#{order.daily_order_number}</p>
+          <p className="text-2xl font-bold">#{order.daily_order_number ?? "-"}</p>
           <p className="text-sm">{order.customer_name} {order.customer_phone}</p>
           <p className="text-sm">
             Ordered{" "}
