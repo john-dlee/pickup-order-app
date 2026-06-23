@@ -24,7 +24,6 @@ export function MenuContent({ categories }: Props) {
   const handleCategorySelect = useCallback((slug: string) => {
     // Tear down listeners from a previous chip tap
     scrollCleanupRef.current?.();
-    scrollCleanupRef.current = null;
   
     setPinnedSlug(slug);
     setScrollSpyEnabled(false);

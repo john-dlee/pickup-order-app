@@ -79,13 +79,9 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
       <p className="mt-2 text-sm text-gray-600">
         Thanks {order.customer_name} — we&apos;re preparing your order.
       </p>
-      {order.status === "ready" ? (
-        <p className="mt-2 font-medium text-green-700">Ready for pickup!</p>
-      ) : (
-        <p className="mt-2 text-sm text-gray-600">
-          Est. ready around {readyTime}
-        </p>
-      )}
+      <p className="mt-2 text-sm text-gray-600">
+        Est. ready around {readyTime}
+      </p>
     </main>
   );
 }
