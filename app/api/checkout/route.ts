@@ -3,6 +3,7 @@ import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { MAX_DISTINCT_MENU_ITEMS } from "@/lib/cart-limits";
 
 const supabase = createSupabaseServerClient();
 
@@ -49,6 +50,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Cart cannot be empty" }, { status: 400 });
     }
 
+    if (items.length > MAX_DISTINCT_MENU_ITEMS) {
+      return NextResponse.json(
+        { error: `Max ${MAX_DISTINCT_MENU_ITEMS} different items per order` }, 
+        { status: 400 }
+      );      
+    }
+
     //const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     const lineItems: ReturnType<typeof toStripeLineItem>[] = [];
 
@@ -75,7 +83,7 @@ export async function POST(request: Request) {
 
     const { data: dbItems, error } = await supabase
       .from("menu_items")
-      .select("id, name, price_cents")
+      .select("id, name, price_cents, is_available")
       .in("id", itemIds);
     
     if (error || !dbItems) {
@@ -86,6 +94,9 @@ export async function POST(request: Request) {
       const validItem = dbItems.find((db) => db.id === clientItem.id)
       if (!validItem) {
         return NextResponse.json({ error: `Item ${clientItem.id} not found`}, { status: 400 });
+      }
+      if (!validItem.is_available) {
+        return NextResponse.json({ error: `${validItem.name} is sold out` }, { status: 400 });
       }
       if (!Number.isInteger(clientItem.quantity) || clientItem.quantity < 1) {
         return NextResponse.json({ error: "Invalid item quantity" }, { status: 400 });    
@@ -130,6 +141,6 @@ export async function POST(request: Request) {
 
   } catch(err) {
     console.log(err);
-    return NextResponse.json({ error: "Checkout failed. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: "Checkout failed. Please try again later." }, { status: 500 });
   }
 }

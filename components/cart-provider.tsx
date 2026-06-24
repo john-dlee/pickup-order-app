@@ -2,6 +2,7 @@
 
 import { createContext, useState, useMemo, useContext, useEffect } from 'react';
 import { ACCESSORIES } from '@/lib/accessories';
+import { MAX_DISTINCT_MENU_ITEMS } from '@/lib/cart-limits';
 
 export type CartItem = {
   id: string;
@@ -61,6 +62,11 @@ export function CartProvider({ children }: { children: React.ReactNode}) {
   const addItem = (item: Omit<CartItem, "quantity">) => {
     setItems((prevItems) => {
       const existingItem = prevItems.find((i) => i.id === item.id);
+
+      if (!existingItem && prevItems.length >= MAX_DISTINCT_MENU_ITEMS) {
+        return prevItems;
+      }
+
       if (existingItem) {
         return prevItems.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }

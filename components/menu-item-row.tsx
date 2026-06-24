@@ -1,17 +1,21 @@
 "use client"
 
 import { useCart } from "@/components/cart-provider";
+import { MAX_DISTINCT_MENU_ITEMS } from "@/lib/cart-limits";
 import { Minus, Plus } from "lucide-react";
 
 type MenuItemRowProps = {
   id: string;
   name: string;
   price_cents: number;
+  is_available: boolean;
 };
 
-export default function MenuItemRow({ id, name, price_cents }: MenuItemRowProps) {
-  const { addItem, getItemQuantity, updateItemQuantity } = useCart();
+export default function MenuItemRow({ id, name, price_cents, is_available }: MenuItemRowProps) {
+  const { items, addItem, getItemQuantity, updateItemQuantity } = useCart();
+  const atItemLimit = items.length >= MAX_DISTINCT_MENU_ITEMS;
   const qty = getItemQuantity(id);
+  const soldOut = !is_available;
 
   const formattedPrice = (price_cents / 100).toLocaleString("en-AU", {
     style: "currency",
@@ -19,14 +23,21 @@ export default function MenuItemRow({ id, name, price_cents }: MenuItemRowProps)
   });
 
   return (
-    <div className="flex items-center justify-between gap-3 py-4">
+    <div
+      className={`flex items-center justify-between gap-3 py-4${soldOut ? " opacity-50" : ""}`}
+    >
       <div className="min-w-0 flex-1">
         <div className="font-medium">{name}</div>
         <div className="text-sm text-gray-600">{formattedPrice}</div>
       </div>
-
       <div className="shrink-0">
-        {qty === 0 ? (
+        {soldOut ? (
+          <span className="text-sm font-medium text-gray-500">Sold out</span>
+        ) : qty === 0 && atItemLimit ? (
+          <span className="font-medium text-gray-500">
+            Max {MAX_DISTINCT_MENU_ITEMS} items
+          </span>
+        ) : qty === 0 ? (
           <button
             type="button"
             onClick={() => addItem({ id, name, price_cents })}

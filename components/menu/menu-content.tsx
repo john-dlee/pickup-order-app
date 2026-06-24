@@ -63,28 +63,32 @@ export function MenuContent({ categories }: Props) {
 
   const activeSlug = pinnedSlug ?? spySlug;
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-12">
       <MenuHero />
       <CategoryChips 
         categories={categories}
         activeSlug={activeSlug}
         onCategorySelect={handleCategorySelect} 
       />
-      <main className="p-4">
+      <main className="px-4 pb-4 pt-2">
         {categories.map((cat) => (
           <section 
             key={cat.id} 
             id={`section-${cat.slug}`}
+            className="border-t-2 pt-3 first:border-t-0 first:pt-0 -mx-4 px-4"
           >
             <h2 className="text-xl font-bold">{cat.name}</h2>
-            {cat.items.map((item) => (
-              <MenuItemRow
-                key={item.id}
-                id={item.id}
-                name={item.name}
-                price_cents={item.price_cents}
-              />
-            ))}
+            <ul className="divide-y">
+              {cat.items.map((item) => (
+                <MenuItemRow
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  price_cents={item.price_cents}
+                  is_available={item.is_available}
+                />
+              ))}
+            </ul>
           </section>
         ))}
       </main>

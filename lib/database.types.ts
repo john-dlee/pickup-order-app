@@ -157,6 +157,7 @@ export type Database = {
           order_number: number
           payment_status: string
           pickup_at: string
+          ready_at: string | null
           status: string
           stripe_checkout_session_id: string | null
           total_cents: number
@@ -173,6 +174,7 @@ export type Database = {
           order_number?: number
           payment_status?: string
           pickup_at: string
+          ready_at?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           total_cents: number
@@ -189,6 +191,7 @@ export type Database = {
           order_number?: number
           payment_status?: string
           pickup_at?: string
+          ready_at?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           total_cents?: number
