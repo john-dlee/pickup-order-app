@@ -9,16 +9,47 @@ import { Label } from "@/components/ui/label";
 import { formatDisplayPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { normaliseAuMobile } from "@/lib/phone";
+import { createSupabaseClient } from "@/lib/supabase/client";
+import { isStoreOpenNow, StoreSettings } from "@/lib/store-hours";
+
+const supabase = createSupabaseClient();
 
 export default function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
   const [isPaying, setIsPaying] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(true);
+  const [storeNotice, setStoreNotice] = useState("");
+
   const canPay = name.trim().length > 0 && normaliseAuMobile(phone);
-  const isStoreOpen = true; // implement lib/store-hours.ts later
 
   const { items, hasLoaded, orderTotalCents, accessoryQuantity } = useCart();
   const router = useRouter();
+
+  useEffect(() => {
+    async function loadStoreHours() {
+      const { data, error } = await supabase
+        .from("store_settings")
+        .select("is_open, open_time, close_time")
+        .single();
+  
+      if (error || !data) {
+        console.error(error);
+        setStoreOpen(false);
+        setStoreNotice("Unable to check store hours. Please try again later.");
+        return;
+      }
+  
+      const isOpen = isStoreOpenNow(data);
+      setStoreOpen(isOpen);
+      if (!isOpen) {
+        setStoreNotice("We're currently closed. Please order during opening hours.");
+      }
+    }
+  
+    loadStoreHours();
+  }, []);
 
   useEffect(() => {
     if(!hasLoaded) return;
@@ -30,9 +61,11 @@ export default function CheckoutPage() {
   if (!hasLoaded || items.length === 0) return null;
 
   async function handlePay() {
-    if (!canPay || isPaying || !isStoreOpen) return;
+    if (!canPay || isPaying || !storeOpen) return;
 
+    setCheckoutError("");
     setIsPaying(true);
+
     try {
       // POST /api/checkout and redirect to stripe
       const accessories = Object.entries(accessoryQuantity)
@@ -41,11 +74,6 @@ export default function CheckoutPage() {
       
       const trimmedName = name.trim();
       const normalisedPhone = normaliseAuMobile(phone);
-
-      if (!normalisedPhone) {
-        // setPhoneError
-        return;
-      }
 
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -57,12 +85,12 @@ export default function CheckoutPage() {
           accessories,
         }),
       });
-      console.log("Pay clicked - imp API");
 
       const data = await res.json();
 
       if (!res.ok) {
         console.error(data.error ?? "Checkout failed");
+        setCheckoutError(data.error ?? "Checkout failed. Please try again later.");
         return;
       }
 
@@ -70,21 +98,22 @@ export default function CheckoutPage() {
 
     } catch (err) {
       console.log(err);
+      setCheckoutError("Something went wrong. Please try again later.");
     } finally {
       setIsPaying(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-white text-black font-sans">
+    <div className="max-w-md mx-auto min-h-screen bg-white text-black font-sans shadow-lg">
       <PickupHeader backHref="/cart" />
-      <main className="max-w-md mx-auto pb-52">
+      <main className="pb-52">
         <div className="bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900 border-b border-gray-200">
-          We start preparing as soon as you pay. Estimated ready in <span className="font-bold">5-10 minutes.</span>
+          We start preparing as soon as you pay. Estimated ready in <span className="font-bold">5-15 minutes.</span>
         </div>
-        <section className="flex justify-center text-xl font-bold px-4 pt-4 pb-1">
+        <header className="flex justify-center text-xl font-bold px-4 pt-4 pb-1">
           <h2>Your details</h2>
-        </section>
+        </header>
         <div className="flex flex-col gap-4 px-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -113,16 +142,22 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-6">
+      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-6 shadow-lg">
         <div className="flex justify-between mb-4 pt-4 font-bold text-lg">
           <span>Total</span>
           <span>{formatDisplayPrice(orderTotalCents)}</span>
         </div>
+        {checkoutError && (
+          <p className="mb-3 text-sm text-red-600">{checkoutError}</p>
+        )}
+        {storeNotice && (
+          <p className="mb-3 text-sm text-amber-600">{storeNotice}</p>
+        )}
         <Button
           type="button"
-          disabled={!canPay || !isStoreOpen || isPaying}
+          disabled={!canPay || !storeOpen || isPaying}
           onClick={handlePay}
-          className="h-11 w-full bg-[#A61C2E] hover:bg-[#8f1826] disabled:opacity-50"
+          className="h-12 w-full bg-[#A61C2E] rounded-lg font-semibold disabled:opacity-50"
         >
           {isPaying ? "Redirecting..." : "Place order"}
         </Button>
