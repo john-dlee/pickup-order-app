@@ -25,7 +25,7 @@ export default function RootLayout({
       className={`${quicksand.variable} h-full antialiased`}>
       <body className="min-h-screen bg-[#F9F6F0] flex justify-center m-0 font-sans font-normal">
         <CartProvider>
-          <div className="w-full max-w-md min-h-screen bg-white relative pb-24 shadow-sm">
+          <div className="w-full min-h-screen relative">
             {children}
           </div>
         </CartProvider>

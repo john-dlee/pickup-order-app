@@ -53,7 +53,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
 
   if (!order) {
     return (
-      <main className="mx-auto max-w-md p-6 text-center">
+      <main className="mx-auto min-h-full max-w-md p-6 text-center bg-white shadow-lg">
         <ClearCartOnMount />
         <h1 className="text-xl font-bold">Payment received</h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -72,7 +72,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
   });
 
   return (
-    <main className="mx-auto max-w-md p-6 text-center">
+    <main className="mx-auto max-w-md p-6 min-h-full text-center bg-white shadow-lg">
       <ClearCartOnMount />
       <h1 className="text-xl font-bold">Payment received</h1>
       <p className="mt-4 text-3xl font-bold">Order #{order.daily_order_number ?? "-"}</p>
@@ -80,7 +80,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
         Thanks {order.customer_name} — we&apos;re preparing your order.
       </p>
       <p className="mt-2 text-sm text-gray-600">
-        Est. ready around {readyTime}
+        Est. ready in 5-15 minutes (around {readyTime})
       </p>
     </main>
   );

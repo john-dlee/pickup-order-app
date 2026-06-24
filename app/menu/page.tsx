@@ -1,10 +1,12 @@
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { MenuCategory } from "@/lib/menu_types";
 import { MenuContent } from '@/components/menu/menu-content';
 import { assignCategorySlug } from '@/lib/category-slug';
 
+export const revalidate = 60;
+
 export default async function MenuPage() {
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('menu_items')
     .select(`
@@ -12,6 +14,7 @@ export default async function MenuPage() {
       name, 
       price_cents,
       sort_order,
+      is_available,
       categories (
         id,
         name,
@@ -50,6 +53,7 @@ export default async function MenuPage() {
       name: row.name,
       price_cents: row.price_cents,
       sort_order: row.sort_order,
+      is_available: row.is_available,
     });
   }
 
@@ -60,5 +64,9 @@ export default async function MenuPage() {
       items: cat.items.sort((a, b) => a.sort_order - b.sort_order),
     }));
   
-  return <MenuContent categories={categories} />;
+  return (
+    <main className='mx-auto max-w-md bg-white shadow-lg'>
+      <MenuContent categories={categories} />
+    </main>
+  );
 }

@@ -67,8 +67,8 @@ export function CategoryChips({ categories, activeSlug, onCategorySelect } : Pro
               className={cn(
                 "shrink-0 rounded-md border px-3 py-2 text-md font-medium transition-colors",
                 isActive
-                  ? "border-gray-900 bg-gray-900 text-white"
-                  : "border-gray-200 bg-white text-gray-900"
+                  ? "border-[#A61C2E]/40 bg-[#A61C2E]/10 text-[#8f1826] shadow-sm"
+                  : "border-gray-200 bg-white text-gray-900 shadow-none"
               )}
               ref={(el) => {
                 if (el) chipRefs.current.set(cat.slug, el);

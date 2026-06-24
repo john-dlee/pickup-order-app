@@ -18,11 +18,11 @@ export default function CartPage() {
   } = useCart();
 
   return (
-    <div className="min-h-screen bg-white text-black font-sans">
+    <div className="max-w-md mx-auto min-h-screen bg-white shadow-lg text-black font-sans">
       {/* Header - always the same */}
       <PickupHeader backHref="/menu" />
 
-      <main className="max-w-md mx-auto pb-52">
+      <main className="pb-52">
         {items.length === 0 ? (
           <>
             <p>Your cart is empty.</p>
@@ -30,7 +30,7 @@ export default function CartPage() {
           </>
         ) : (
           <>
-            <header className="flex items-center px-4 py-4 border-b border-gray-200 font-bold">Order details
+            <header className="flex items-center px-4 py-4 border-b border-gray-200 text-xl font-bold">Order details
             </header>
             <div className="flex flex-col gap-4 p-4 border-b border-gray-200">
               {items.map((item) => (
@@ -72,7 +72,7 @@ export default function CartPage() {
         )}  
       </main>
       {items.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white pb-6">
+        <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white pb-6 shadow-lg">
           <div className="px-4 py-4">
             <div className="flex justify-between">
               <span>Subtotal</span>
@@ -92,9 +92,9 @@ export default function CartPage() {
           <div className="px-4">
             <Link 
               href="/checkout"
-              className="w-full p-4 bg-[#A61C2E] text-white rounded-lg flex justify-between items-center font-semibold shadow-lg transition-transform active:scale-95"
+              className="w-full h-12 px-4 bg-[#A61C2E] text-white rounded-lg flex justify-center items-center font-semibold shadow-lg transition-transform active:scale-95"
             >
-              Continue to checkout
+              Checkout
             </Link>
           </div>
         </div>

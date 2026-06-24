@@ -9,7 +9,7 @@ export default async function OrderSuccessPage({ searchParams }: Props) {
 
   if (!session_id) {
     return (
-      <main className="mx-auto max-w-md p-6 text-center">
+      <main className="mx-auto max-w-md p-6 text-center bg-white min-h-screen shadow-lg">
         <h1 className="text-xl font-bold">Payment received</h1>
         <p className="mt-2 text-sm text-gray-600">Missing order reference.</p>
       </main>

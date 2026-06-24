@@ -122,13 +122,7 @@ export async function POST(request: Request) {
     totalCents += defined.price_cents * acc.quantity;
   }
 
-  // Check if order requires extra prep time
-  const hasHotFood = items.some((item) => {
-    const dbItem = dbItems.find((d) => d.id === item.id);
-    return dbItem?.requires_cooking === true;
-  })
-
-  const readyMinutes = hasHotFood ? 20 : 10;
+  const readyMinutes = 15;
   const pickupAt = new Date(Date.now() + readyMinutes * 60 * 1000).toISOString();
 
   const orderDate = new Intl.DateTimeFormat("en-CA", {
