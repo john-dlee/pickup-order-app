@@ -72,7 +72,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
   });
 
   return (
-    <main className="mx-auto max-w-md p-6 min-h-full text-center bg-white shadow-lg">
+    <main className="mx-auto max-w-md p-6 min-h-screen text-center bg-white shadow-lg">
       <ClearCartOnMount />
       <h1 className="text-xl font-bold">Payment received</h1>
       <p className="mt-4 text-3xl font-bold">Order #{order.daily_order_number ?? "-"}</p>
