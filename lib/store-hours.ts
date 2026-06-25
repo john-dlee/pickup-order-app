@@ -106,40 +106,18 @@ export function formatWeeklyHours(weeklyHours: DayHours[]): FormattedHoursLine[]
   const sorted = [...weeklyHours].sort(
     (a, b) => mondayFirstOrder(Number(a.day_of_week)) - mondayFirstOrder(Number(b.day_of_week))
   );
-  const lines: FormattedHoursLine[] = [];
-  let i = 0;
 
-  while (i < sorted.length) {
-    const start = sorted[i];
-    let j = i + 1;
+  return sorted.map((day) => {
+    const dayNum = Number(day.day_of_week);
+    const label = DAY_LABELS[dayNum];
 
-    // Group matching consecutive operational schedules
-    while (
-      j < sorted.length &&
-      sorted[j].is_closed === start.is_closed &&
-      (start.is_closed || (sorted[j].open_time === start.open_time && sorted[j].close_time === start.close_time))
-    ) {
-      j++;
+    if (day.is_closed) {
+      return { label, hours: "Closed" };
     }
 
-    const startDay = Number(start.day_of_week);
-    const endDay = Number(sorted[j - 1].day_of_week);
-    const dayLabel =
-      j - i === 1
-        ? DAY_LABELS[startDay]
-        : `${DAY_LABELS[startDay]}–${DAY_LABELS[endDay]}`;
-
-    if (start.is_closed) {
-      lines.push({ label: dayLabel, hours: "Closed" });
-    } else {
-      const range = `${formatStoreTime(start.open_time)} – ${formatStoreTime(start.close_time)}`;
-      lines.push({
-        label: dayLabel,
-        hours: `${formatStoreTime(start.open_time)} – ${formatStoreTime(start.close_time)}`,
-      });
-    }
-
-    i = j;
-  }
-  return lines;
+    return {
+      label,
+      hours: `${formatStoreTime(day.open_time)} – ${formatStoreTime(day.close_time)}`,
+    };
+  });
 }

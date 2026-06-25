@@ -36,7 +36,7 @@ export function MenuContent({ categories }: Props) {
           .select("day_of_week, open_time, close_time, is_closed")
           .order("day_of_week"),
       ]);
-      
+
       if (settingsRes.error || hoursRes.error || !settingsRes.data) {
         console.error(settingsRes.error ?? hoursRes.error);
         return;
@@ -107,11 +107,14 @@ export function MenuContent({ categories }: Props) {
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
           <p className="font-semibold text-amber-900">We're currently closed</p>
           {/* Structured Weekly Schedule */}
-          <ul className="mt-2 space-y-1 border-y border-amber-200/60 py-2">
+          <ul className="mt-2 space-y-0.5 border-y border-amber-200/60 py-2">
             {hoursLines.map((line) => (
-              <li key={line.label} className="flex justify-between gap-4">
+              <li
+                key={line.label}
+                className="flex justify-between max-w-[11rem]"
+              >
                 <span className="font-medium text-amber-900">{line.label}</span>
-                <span className="font-mono text-amber-700">{line.hours}</span>
+                <span className="text-amber-700">{line.hours}</span>
               </li>
             ))}
           </ul>
