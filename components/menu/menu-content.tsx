@@ -36,7 +36,7 @@ export function MenuContent({ categories }: Props) {
           .select("day_of_week, open_time, close_time, is_closed")
           .order("day_of_week"),
       ]);
-    
+      
       if (settingsRes.error || hoursRes.error || !settingsRes.data) {
         console.error(settingsRes.error ?? hoursRes.error);
         return;
