@@ -10,7 +10,7 @@ import { formatDisplayPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseClient } from "@/lib/supabase/client";
-import { isStoreOpenNow, StoreSettings } from "@/lib/store-hours";
+import { formatWeeklyHours, isStoreOpenNow } from "@/lib/store-hours";
 
 const supabase = createSupabaseClient();
 
@@ -29,22 +29,37 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     async function loadStoreHours() {
-      const { data, error } = await supabase
-        .from("store_settings")
-        .select("is_open, open_time, close_time")
-        .single();
-  
-      if (error || !data) {
-        console.error(error);
+      const [settingsRes, hoursRes] = await Promise.all([
+        supabase.from("store_settings").select("is_open").single(),
+        supabase
+          .from("store_hours")
+          .select("day_of_week, open_time, close_time, is_closed")
+          .order("day_of_week"),
+      ]);
+    
+      if (settingsRes.error || hoursRes.error || !settingsRes.data) {
+        console.error(settingsRes.error ?? hoursRes.error);
         setStoreOpen(false);
         setStoreNotice("Unable to check store hours. Please try again later.");
         return;
       }
-  
-      const isOpen = isStoreOpenNow(data);
+
+      if (!hoursRes.data?.length) {
+        console.error("store_hours is empty — seed the table in Supabase");
+        setStoreOpen(false);
+        setStoreNotice("Unable to check store hours. Please try again later.");
+        return;
+      }
+
+      const isOpen = isStoreOpenNow(settingsRes.data, hoursRes.data);
       setStoreOpen(isOpen);
       if (!isOpen) {
-        setStoreNotice("We're currently closed. Please order during opening hours.");
+        const hoursText = formatWeeklyHours(hoursRes.data);
+        setStoreNotice(
+          hoursText
+            ? `We're currently closed.`
+            : "We're currently closed. Please order during opening hours."
+        );
       }
     }
   

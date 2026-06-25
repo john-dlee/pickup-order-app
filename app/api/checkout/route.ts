@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { MAX_DISTINCT_MENU_ITEMS } from "@/lib/cart-limits";
+import { isStoreOpenNow } from "@/lib/store-hours";
 
 const supabase = createSupabaseServerClient();
 
@@ -37,6 +38,34 @@ export async function POST(request: Request) {
 
   try {
     const { name, phone, items = [], accessories = [] } = body as CheckoutBody;
+    const [settingsRes, hoursRes] = await Promise.all([
+      supabase.from("store_settings").select("is_open").single(),
+      supabase
+        .from("store_hours")
+        .select("day_of_week, open_time, close_time, is_closed")
+        .order("day_of_week"),
+    ]);
+    
+    if (settingsRes.error || hoursRes.error || !settingsRes.data) {
+      return NextResponse.json(
+        { error: "Unable to check store hours. Please try again later." },
+        { status: 503 }
+      );
+    }
+
+    if (!hoursRes.data?.length) {
+      return NextResponse.json(
+        { error: "Unable to check store hours. Please try again later." },
+        { status: 503 }
+      );
+    }
+
+    if (!isStoreOpenNow(settingsRes.data, hoursRes.data)) {
+      return NextResponse.json(
+        { error: "We're currently closed. Please order during opening hours." },
+        { status: 403 }
+      );
+    }
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -57,7 +86,6 @@ export async function POST(request: Request) {
       );      
     }
 
-    //const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     const lineItems: ReturnType<typeof toStripeLineItem>[] = [];
 
     for (const clientAcc of accessories) {

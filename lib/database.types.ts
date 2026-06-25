@@ -199,6 +199,27 @@ export type Database = {
         }
         Relationships: []
       }
+      store_hours: {
+        Row: {
+          day_of_week: number
+          open_time: string
+          close_time: string
+          is_closed: boolean
+        }
+        Insert: {
+          day_of_week: number
+          open_time: string
+          close_time: string
+          is_closed?: boolean
+        }
+        Update: {
+          day_of_week?: number
+          open_time?: string
+          close_time?: string
+          is_closed?: boolean
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           close_time: string
