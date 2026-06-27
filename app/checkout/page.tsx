@@ -17,6 +17,7 @@ const supabase = createSupabaseClient();
 export default function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [isPaying, setIsPaying] = useState(false);
   const [storeOpen, setStoreOpen] = useState(true);
@@ -89,6 +90,7 @@ export default function CheckoutPage() {
       
       const trimmedName = name.trim();
       const normalisedPhone = normaliseAuMobile(phone);
+      const trimmedEmail = email.trim() || undefined;
 
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -96,6 +98,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           name: trimmedName,
           phone: normalisedPhone,
+          email: trimmedEmail,
           items: items.map(({id, quantity}) => ({ id, quantity })),
           accessories,
         }),
@@ -154,6 +157,18 @@ export default function CheckoutPage() {
               inputMode="tel"
               autoComplete="tel"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (optional)</Label>
+            <Input 
+              id="email"
+              type="email"
+              placeholder="example@example.com"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">For payment receipts only</p>
           </div>
         </div>
       </main>

@@ -13,9 +13,14 @@ type CheckoutAccessory = { id: string; quantity: number };
 type CheckoutBody = {
   name: string;
   phone: string;
+  email?: string;
   items: CheckoutItem[];
   accessories: CheckoutAccessory[];
 };
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function toStripeLineItem(name: string, unitAmountCents: number, quantity: number) {
   return {
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, phone, items = [], accessories = [] } = body as CheckoutBody;
+    const { name, phone, email, items = [], accessories = [] } = body as CheckoutBody;
     const [settingsRes, hoursRes] = await Promise.all([
       supabase.from("store_settings").select("is_open").single(),
       supabase
@@ -73,6 +78,11 @@ export async function POST(request: Request) {
 
     if (!normaliseAuMobile(phone)) {
       return NextResponse.json({ error: "Valid phone is required" }, { status: 400 });
+    }
+
+    const trimmedEmail = email?.trim();
+    if (trimmedEmail && !isValidEmail(email)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
     if (!items.length) {
@@ -153,11 +163,13 @@ export async function POST(request: Request) {
       cancel_url: `${appUrl}/checkout`,
       line_items: lineItems,
       mode: "payment",
+      ...(trimmedEmail ? { customer_email: trimmedEmail } : {}),
       metadata: {
         customer_name: name.trim(),
         customer_phone: normalisedPhone,
         items_json: JSON.stringify(items),
         accessories_json: JSON.stringify(accessories),
+        ...(trimmedEmail ? { customer_email: trimmedEmail } : {}),
       },
     })
     
