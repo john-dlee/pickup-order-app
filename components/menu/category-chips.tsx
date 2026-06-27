@@ -52,7 +52,7 @@ export function CategoryChips({ categories, activeSlug, onCategorySelect } : Pro
   }, [activeSlug]);
 
   return (
-    <div className="sticky top-0 z-10 h-14 shadow-sm bg-white">
+    <div className="sticky top-0 z-10 h-14 shadow-sm bg-[#EEEEEE] backdrop-blur">
       <div 
         className="flex items-center h-full gap-2 px-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         ref={scrollRef}
