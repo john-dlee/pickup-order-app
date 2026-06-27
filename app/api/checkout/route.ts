@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     }
 
     const trimmedEmail = email?.trim();
-    if (trimmedEmail && !isValidEmail(email)) {
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
