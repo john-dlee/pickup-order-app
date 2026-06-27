@@ -69,10 +69,18 @@ export default function AdminOrdersPage() {
   const [expandedCompletedId, setExpandedCompletedId] = useState<string | null>(
     null
   );
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "live" | "offline"
+  >("connecting");
 
   const seenIds = useRef(new Set<string>());
   const isFirstLoad = useRef(true);
   const soundReadyRef = useRef(false);
+
+  function notificationSound() {
+    const audio = new Audio("/sounds/notification.mp3");
+    audio.play().catch(() => {});
+  }
 
   const loadOrders = useCallback(async () => {
     const today = getSydneyDateString();
@@ -107,35 +115,26 @@ export default function AdminOrdersPage() {
     if (isFirstLoad.current) {
       next.forEach((order) => seenIds.current.add(order.id));
       isFirstLoad.current = false;
+    } else {
+      for (const order of next) {
+        if (seenIds.current.has(order.id)) continue;
+        seenIds.current.add(order.id);
+        if (order.status === "active" && soundReadyRef.current) {
+          notificationSound();
+        }
+      }
     }
 
     setTodayOrders(next);
   }, []);
 
   useEffect(() => {
-    loadOrders();
-
     const channel = supabase
       .channel("kitchen")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "orders" },
-        (payload) => {
-          const row = payload.new as {
-            id?: string;
-            payment_status?: "paid";
-            status?: "active";
-          };
-          if (
-            row.payment_status !== "paid" ||
-            row.status !== "active" ||
-            !row.id
-          )
-            return;
-          if (seenIds.current.has(row.id)) return;
-
-          seenIds.current.add(row.id);
-          if (soundReadyRef.current) notificationSound();
+        () => {
           loadOrders();
         }
       )
@@ -146,17 +145,46 @@ export default function AdminOrdersPage() {
           loadOrders();
         }
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "order_items"},
+        () => {
+          loadOrders();
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnectionStatus("live");
+          loadOrders();
+        } else if (
+          status === "TIMED_OUT" || 
+          status === "CLOSED" ||
+          status === "CHANNEL_ERROR"
+        ) {
+          setConnectionStatus("offline");
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [loadOrders]);
 
-  function notificationSound() {
-    const audio = new Audio("/sounds/notification.mp3");
-    audio.play().catch(() => {});
-  }
+  useEffect(() => {
+    const id = setInterval(loadOrders, 120_000);
+    return () => clearInterval(id);
+  }, [loadOrders]);
+
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        loadOrders();
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [loadOrders]);
 
   function enableSound() {
     const audio = new Audio("/sounds/notification.mp3");
@@ -218,6 +246,14 @@ export default function AdminOrdersPage() {
 
   return (
     <main className="w-full border rounded-xl">
+      {connectionStatus === "offline" && (
+        <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p>Connection lost - orders still check every 2 minutes.</p>
+          <Button variant="outline" size="sm" onClick={() => loadOrders()}>
+            Refresh orders
+          </Button>
+        </div>
+      )}
       <div className="flex items-center justify-between p-4 gap-4 border-b">
         <h1 className="text-xl font-bold">Kitchen</h1>
         <div className="flex items-center gap-3">
