@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Minus, Plus } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
-import { formatDisplayPrice } from "@/lib/utils";
+import { formatDisplayPrice, gstFromInclusiveCents } from "@/lib/utils";
 import BackArrow from "@/components/BackArrow";
 import ExtrasSection from "@/components/ExtrasSection";
 import PickupHeader from "@/components/PickupHeader";
@@ -79,11 +79,15 @@ export default function CartPage() {
               <span>{formatDisplayPrice(totalCents)}</span>
             </div>
             {accessoriesTotalCents > 0 && (
-              <div className="flex justify-between pb-3">
+              <div className="flex justify-between">
                 <span>Extras</span>
                 <span>{formatDisplayPrice(accessoriesTotalCents)}</span>
               </div>
             )}
+            <div className="flex justify-between text-sm text-gray-600 mt-1">
+              <span>Includes GST (10%)</span>
+              <span>{formatDisplayPrice(gstFromInclusiveCents(orderTotalCents))}</span>
+            </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
               <span>{formatDisplayPrice(orderTotalCents)}</span>

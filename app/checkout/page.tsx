@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input"; 
 import PickupHeader from "@/components/PickupHeader";
 import { Label } from "@/components/ui/label";
-import { formatDisplayPrice } from "@/lib/utils";
+import { formatDisplayPrice, gstFromInclusiveCents } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseClient } from "@/lib/supabase/client";
@@ -173,9 +173,13 @@ export default function CheckoutPage() {
         </div>
       </main>
       <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-6 shadow-lg">
-        <div className="flex justify-between mb-4 pt-4 font-bold text-lg">
+        <div className="flex justify-between mb-1 pt-4 font-bold text-lg">
           <span>Total</span>
           <span>{formatDisplayPrice(orderTotalCents)}</span>
+        </div>
+        <div className="flex justify-between mb-4 text-sm text-gray-600">
+          <span>Includes GST (10%)</span>
+          <span>{formatDisplayPrice(gstFromInclusiveCents(orderTotalCents))}</span>
         </div>
         {checkoutError && (
           <p className="mb-3 text-sm text-red-600">{checkoutError}</p>
