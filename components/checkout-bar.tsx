@@ -19,7 +19,7 @@ export default function CheckoutBar() {
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return createPortal(
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center pointer-events-none">
+    <div className="fixed inset-x-0 bottom-0 z-60 flex justify-center pointer-events-none">
       <div className="w-full max-w-md px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-auto">
         <Link
           href="/cart"
