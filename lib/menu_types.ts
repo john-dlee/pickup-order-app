@@ -4,6 +4,7 @@ export type MenuItem = {
   price_cents: number;
   sort_order: number;
   is_available: boolean;
+  description: string | null;
 }
 
 export type MenuCategory = {

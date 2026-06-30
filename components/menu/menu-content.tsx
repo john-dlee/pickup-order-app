@@ -1,7 +1,8 @@
 "use client"
 
-import type { MenuCategory } from "@/lib/menu_types";
+import type { MenuCategory, MenuItem } from "@/lib/menu_types";
 import MenuItemRow from "@/components/menu-item-row";
+import { MenuItemSheet } from "@/components/menu-item-sheet";
 import { MenuHero } from "@/components/menu/menu-hero";
 import { CategoryChips } from "./category-chips";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -26,6 +27,8 @@ export function MenuContent({ categories }: Props) {
     categories.map((c) => c.slug),
     { enabled: scrollSpyEnabled }
   );
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     async function loadStoreHours() {
@@ -99,6 +102,18 @@ export function MenuContent({ categories }: Props) {
     };
   }, []);
 
+  function openItemSheet(item: MenuItem) {
+    setSelectedItem(item);
+    setSheetOpen(true);
+  }
+
+  function handleSheetOpenChange(open: boolean) {
+    setSheetOpen(open);
+    if (!open) {
+      setTimeout(() => setSelectedItem(null), 300);
+    }
+  }
+
   const activeSlug = pinnedSlug ?? spySlug;
   return (
     <div className="min-h-screen pb-12">
@@ -128,15 +143,15 @@ export function MenuContent({ categories }: Props) {
         activeSlug={activeSlug}
         onCategorySelect={handleCategorySelect} 
       />
-      <main className="px-4 pb-4 pt-2">
+      <main className="pb-4">
         {categories.map((cat) => (
           <section 
             key={cat.id} 
             id={`section-${cat.slug}`}
-            className="border-t-2 pt-3 first:border-t-0 first:pt-0 -mx-4 px-4"
+            className="border-b border-gray-200"
           >
-            <h2 className="text-xl font-bold">{cat.name}</h2>
-            <ul className="divide-y">
+            <h2 className="text-xl font-bold px-4 py-2">{cat.name}</h2>
+            <ul className="divide-y divide-gray-200 border-t border-gray-200">
               {cat.items.map((item) => (
                 <MenuItemRow
                   key={item.id}
@@ -144,12 +159,18 @@ export function MenuContent({ categories }: Props) {
                   name={item.name}
                   price_cents={item.price_cents}
                   is_available={item.is_available}
+                  onOpen={() => openItemSheet(item)}
                 />
               ))}
             </ul>
           </section>
         ))}
       </main>
+      <MenuItemSheet
+        item={selectedItem}
+        open={sheetOpen}
+        onOpenChange={handleSheetOpenChange}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ export default async function MenuPage() {
       price_cents,
       sort_order,
       is_available,
+      description,
       categories (
         id,
         name,
@@ -54,6 +55,7 @@ export default async function MenuPage() {
       price_cents: row.price_cents,
       sort_order: row.sort_order,
       is_available: row.is_available,
+      description: row.description,
     });
   }
 
