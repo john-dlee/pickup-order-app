@@ -14,26 +14,37 @@ export default function CheckoutBar() {
     setMounted(true);
   }, []);
 
-  if (!mounted || items.length === 0) return null;
+  if (!mounted) return null;
 
+  const isVisible = items.length > 0;
   const totalItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return createPortal(
-    <div className="fixed inset-x-0 bottom-0 z-60 flex justify-center pointer-events-none">
-      <div className="w-full max-w-md px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-auto">
-        <Link
-          href="/cart"
-          className="w-full h-12 px-4 bg-[#A61C2E] text-white rounded-lg flex justify-between items-center font-semibold shadow-lg transition-transform active:scale-95"
-        >
-          <div className="flex items-center gap-4">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#A61C2E] text-sm font-bold">
-              {totalItemsCount}
-            </span>
-            <span>View cart</span>
-          </div>
-          <span>{formatDisplayPrice(totalCents)}</span>
-        </Link>
-      </div>
+    <div
+      className="
+        pointer-events-none fixed bottom-0 left-1/2 z-[60] w-full max-w-md
+        -translate-x-1/2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]
+      "
+    >
+      <Link
+        href="/cart"
+        tabIndex={isVisible ? 0 : -1}
+        aria-hidden={!isVisible}
+        className={`
+          flex h-12 w-full items-center justify-between rounded-lg
+          bg-[#A61C2E] px-4 font-semibold text-white shadow-lg
+          transition-opacity active:opacity-90
+          ${isVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}
+        `}
+      >
+        <div className="flex items-center gap-4">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#A61C2E] text-sm font-bold">
+            {totalItemsCount}
+          </span>
+          <span>View cart</span>
+        </div>
+        <span className="tabular-nums">{formatDisplayPrice(totalCents)}</span>
+      </Link>
     </div>,
     document.body
   );
