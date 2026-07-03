@@ -4,17 +4,16 @@ import Link from "next/link";
 import { Minus, Plus } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { formatDisplayPrice, gstFromInclusiveCents } from "@/lib/utils";
-import BackArrow from "@/components/BackArrow";
 import ExtrasSection from "@/components/ExtrasSection";
 import PickupHeader from "@/components/PickupHeader";
+import CartFooter from "@/components/cart-footer";
+import { MAX_DISTINCT_MENU_ITEMS } from "@/lib/cart-limits";
+
 
 export default function CartPage() {
   const { 
-    items, 
-    totalCents, 
+    items,
     updateItemQuantity,
-    accessoriesTotalCents,
-    orderTotalCents,
   } = useCart();
 
   return (
@@ -25,13 +24,19 @@ export default function CartPage() {
       <main className="pb-52">
         {items.length === 0 ? (
           <>
-            <p>Your cart is empty.</p>
-            <Link href="/menu">Return to menu</Link>
+            <header className="flex items-center px-4 py-4 border-b border-gray-200 text-xl font-bold">Order details
+            </header>
+            <p className="text-center mt-3">Your cart is empty.</p>
           </>
         ) : (
           <>
             <header className="flex items-center px-4 py-4 border-b border-gray-200 text-xl font-bold">Order details
             </header>
+            {items.length >= MAX_DISTINCT_MENU_ITEMS && (
+              <p className="mx-4 mt-4 text-sm text-amber-700">
+                You&apos;ve reached the max of {MAX_DISTINCT_MENU_ITEMS} different items.
+              </p>
+            )}
             <div className="flex flex-col gap-4 p-4 border-b border-gray-200">
               {items.map((item) => (
                 <div key={item.id} className="flex w-full items-center justify-between"> 
@@ -71,38 +76,7 @@ export default function CartPage() {
           </>
         )}  
       </main>
-      {items.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white pb-6 shadow-lg">
-          <div className="px-4 py-4">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatDisplayPrice(totalCents)}</span>
-            </div>
-            {accessoriesTotalCents > 0 && (
-              <div className="flex justify-between">
-                <span>Extras</span>
-                <span>{formatDisplayPrice(accessoriesTotalCents)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm text-gray-600 mt-1">
-              <span>Includes GST (10%)</span>
-              <span>{formatDisplayPrice(gstFromInclusiveCents(orderTotalCents))}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg">
-              <span>Total</span>
-              <span>{formatDisplayPrice(orderTotalCents)}</span>
-            </div>
-          </div>
-          <div className="px-4">
-            <Link 
-              href="/checkout"
-              className="w-full h-12 px-4 bg-[#A61C2E] text-white rounded-lg flex justify-center items-center font-semibold shadow-lg transition-transform active:scale-95"
-            >
-              Checkout
-            </Link>
-          </div>
-        </div>
-      )}
+      <CartFooter />
     </div>
   );
 }
