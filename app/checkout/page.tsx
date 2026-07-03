@@ -10,7 +10,7 @@ import { formatDisplayPrice, gstFromInclusiveCents } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseClient } from "@/lib/supabase/client";
-import { formatWeeklyHours, isStoreOpenNow } from "@/lib/store-hours";
+import { isStoreOpenNow } from "@/lib/store-hours";
 
 const supabase = createSupabaseClient();
 
@@ -23,7 +23,14 @@ export default function CheckoutPage() {
   const [storeOpen, setStoreOpen] = useState(true);
   const [storeNotice, setStoreNotice] = useState("");
 
-  const canPay = name.trim().length > 0 && normaliseAuMobile(phone);
+  const trimmedName = name.trim();
+  const normalisedPhone = normaliseAuMobile(phone);
+  const trimmedEmail = email.trim();
+
+  const canPay = 
+    trimmedName.length > 0 && 
+    normalisedPhone &&
+    trimmedEmail.length > 0;
 
   const { items, hasLoaded, orderTotalCents, accessoryQuantity } = useCart();
   const router = useRouter();
@@ -55,12 +62,7 @@ export default function CheckoutPage() {
       const isOpen = isStoreOpenNow(settingsRes.data, hoursRes.data);
       setStoreOpen(isOpen);
       if (!isOpen) {
-        const hoursText = formatWeeklyHours(hoursRes.data);
-        setStoreNotice(
-          hoursText
-            ? `We're currently closed.`
-            : "We're currently closed. Please order during opening hours."
-        );
+        setStoreNotice("Online ordering is currently closed.");
       }
     }
   
@@ -87,10 +89,6 @@ export default function CheckoutPage() {
       const accessories = Object.entries(accessoryQuantity)
         .filter(([, quantity]) => quantity > 0)
         .map(([id, quantity]) => ({ id, quantity }));
-      
-      const trimmedName = name.trim();
-      const normalisedPhone = normaliseAuMobile(phone);
-      const trimmedEmail = email.trim() || undefined;
 
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -159,20 +157,20 @@ export default function CheckoutPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email (optional)</Label>
+            <Label htmlFor="email">Email</Label>
             <Input 
               id="email"
               type="email"
               placeholder="example@example.com"
               autoComplete="email"
               value={email}
+              required
               onChange={(e) => setEmail(e.target.value)}
             />
-            <p className="text-xs text-gray-500">For payment receipts only</p>
           </div>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-6 shadow-lg">
+      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-4 shadow-lg">
         <div className="flex justify-between mb-1 pt-4 font-bold text-lg">
           <span>Total</span>
           <span>{formatDisplayPrice(orderTotalCents)}</span>
@@ -191,7 +189,9 @@ export default function CheckoutPage() {
           type="button"
           disabled={!canPay || !storeOpen || isPaying}
           onClick={handlePay}
-          className="h-12 w-full bg-[#A61C2E] rounded-lg font-semibold disabled:opacity-50"
+          className="
+            w-full h-12 bg-[#A61C2E] rounded-lg font-semibold text-base disabled:opacity-50
+            transition-transform duration-150 active:scale-95 shadow-lg px-4 border-0"
         >
           {isPaying ? "Redirecting..." : "Place order"}
         </Button>

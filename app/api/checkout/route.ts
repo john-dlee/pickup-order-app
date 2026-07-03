@@ -13,7 +13,7 @@ type CheckoutAccessory = { id: string; quantity: number };
 type CheckoutBody = {
   name: string;
   phone: string;
-  email?: string;
+  email: string;
   items: CheckoutItem[];
   accessories: CheckoutAccessory[];
 };
@@ -81,7 +81,12 @@ export async function POST(request: Request) {
     }
 
     const trimmedEmail = email?.trim();
-    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+
+    if (!trimmedEmail) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
@@ -163,13 +168,13 @@ export async function POST(request: Request) {
       cancel_url: `${appUrl}/checkout`,
       line_items: lineItems,
       mode: "payment",
-      ...(trimmedEmail ? { customer_email: trimmedEmail } : {}),
+      customer_email: trimmedEmail,
       metadata: {
         customer_name: name.trim(),
         customer_phone: normalisedPhone,
         items_json: JSON.stringify(items),
         accessories_json: JSON.stringify(accessories),
-        ...(trimmedEmail ? { customer_email: trimmedEmail } : {}),
+        customer_email: trimmedEmail,
       },
     })
     
