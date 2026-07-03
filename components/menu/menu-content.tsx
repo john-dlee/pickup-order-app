@@ -120,7 +120,7 @@ export function MenuContent({ categories }: Props) {
       <MenuHero />
       {showClosedBanner && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
-          <p className="font-semibold text-amber-900">We're currently closed</p>
+          <p className="font-semibold text-amber-900">Online ordering currently unavailable.</p>
           {/* Structured Weekly Schedule */}
           <ul className="mt-2 space-y-0.5 border-y border-amber-200/60 py-2">
             {hoursLines.map((line) => (
@@ -134,7 +134,7 @@ export function MenuContent({ categories }: Props) {
             ))}
           </ul>
           <p className="mt-2 text-xs text-amber-700">
-            Checkout is disabled until standard operating hours resume.
+            Online checkout is disabled outside of online pickup hours.
           </p>
         </div>
       )}
