@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sapporo Sushi Pickup Order App
+Mobile-first pickup ordering web application for a local sushi takeaway store to reduce wait times for customers during peak hours.
 
-## Getting Started
+## Tech Stack
+* **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
+* **Backend:** Next.js API Routes (Route Handlers)ß
+* **Database:** PostgreSQL (Supabase)
+* **Payments:** Stripe Checkout & Webhooks
+* **Infrastructure:** Vercel
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Customer
+    participant A as Next.js
+    participant S as Stripe
+    participant DB as Supabase
+
+    C->>A: POST /api/checkout (item IDs + quantities)
+    critical Server-side validation
+        A->>DB: Check store hours & menu prices
+    end
+    A->>S: Create Checkout Session
+    S-->>C: Redirect to hosted Checkout
+    C->>S: Pay
+
+    S-->>C: Redirect to /order/success?session_id=...
+
+    note over S,A: Async (may arrive after redirect)
+    S->>A: POST /api/webhooks/stripe<br/>(checkout.session.completed)
+    A->>DB: Insert orders + order_items
+
+    loop Poll every 3s until order exists
+        C->>A: GET /api/orders/lookup?session_id=...
+        A->>DB: Query by stripe_checkout_session_id
+        A-->>C: order or null
+    end
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## dijfie
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```mermaid
+flowchart TB
+  subgraph Client
+    C[Customer]
+    K[Kitchen admin]
+  end
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+  subgraph Vercel
+    A[Next.js App Router<br/>UI + API routes]
+  end
 
-## Learn More
+  subgraph External
+    S[Stripe]
+    DB[(Supabase)]
+  end
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+  C -->|menu, checkout, order lookup| A
+  C -->|pay| S
+  A -->|create session| S
+  S -->|webhook| A
+  A -->|menu, orders, hours| DB
+  K -->|admin UI| A
+  K <-->|Realtime + poll| DB
+  ```

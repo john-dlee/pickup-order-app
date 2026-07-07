@@ -8,7 +8,7 @@ import ExtrasSection from "@/components/ExtrasSection";
 import PickupHeader from "@/components/PickupHeader";
 import CartFooter from "@/components/cart-footer";
 import { MAX_DISTINCT_MENU_ITEMS } from "@/lib/cart-limits";
-
+import { cartLineKey } from "@/lib/cart-lines";
 
 export default function CartPage() {
   const { 
@@ -39,16 +39,20 @@ export default function CartPage() {
             )}
             <div className="flex flex-col gap-4 p-4 border-b border-gray-200">
               {items.map((item) => (
-                <div key={item.id} className="flex w-full items-center justify-between"> 
+                <div key={cartLineKey(item.id, item.selections)} className="flex w-full items-center justify-between"> 
                   <div className="flex flex-col">
-                    <div className="font-bold">{item.name}</div>    
+                    <div className="font-bold">{item.name}</div> 
+                    {item.selectionLabels &&
+                      Object.values(item.selectionLabels).map((label) => (
+                        <div key={label} className="text-sm text-gray-600">{label}</div>
+                      ))}
                     <div>{formatDisplayPrice(item.price_cents)}</div>
                   </div>
                   <div className="inline-flex shrink-0 items-center rounded border gap-1">       
                     <button 
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
-                      onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                      onClick={() => updateItemQuantity(item.id, item.quantity - 1, item.selections)}
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -58,7 +62,7 @@ export default function CartPage() {
                     <button 
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
-                      onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
+                      onClick={() => updateItemQuantity(item.id, item.quantity + 1, item.selections)}
                     >
                       <Plus className="h-4 w-4" />
                     </button>

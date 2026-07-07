@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { MenuCategory } from "@/lib/menu_types";
+import type { MenuCategory, ModifierGroup } from "@/lib/menu_types";
 import { MenuContent } from '@/components/menu/menu-content';
 import { assignCategorySlug } from '@/lib/category-slug';
 
@@ -7,7 +7,13 @@ export const revalidate = 60;
 
 export default async function MenuPage() {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  const [
+    { data: menuRows, error: itemsError },
+    { data: groups, error: groupsError },
+    { data: options, error: optionsError },
+    { data: links, error: linksError },
+  ] = await Promise.all([
+    supabase
     .from('menu_items')
     .select(`
       id, 
@@ -21,20 +27,64 @@ export default async function MenuPage() {
         name,
         sort_order
       )
-    `);
-  
-  if (error) {
-    return <div>Error: {error.message}</div>;
+    `),
+    supabase.from("modifier_groups").select("id, name, required, sort_order"),
+    supabase.from("modifier_options").select("id, group_id, name, sort_order"),
+    supabase.from("menu_item_modifier_groups").select("menu_item_id, group_id"),
+  ]);
+
+  if (itemsError || groupsError || optionsError || linksError) {
+    const err = itemsError ?? groupsError ?? optionsError ?? linksError;
+    return <div>Error: {err?.message}</div>;
   }
 
-  if (!data?.length) {
+  if (!menuRows?.length) {
     return <div>No items found</div>;
+  }
+
+  const groupMap = new Map<string, ModifierGroup>();
+
+  for (const g of groups ?? []) {
+    groupMap.set(g.id, {
+      id: g.id,
+      name: g.name,
+      required: g.required,
+      sort_order: g.sort_order,
+      options: [],
+    })
+  }
+
+  for (const o of options ?? []) {
+    groupMap.get(o.group_id)?.options.push({
+      id: o.id,
+      name: o.name,
+      sort_order: o.sort_order,
+    });
+  }
+
+  for (const g of groupMap.values()) {
+    g.options.sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  const groupByItemId = new Map<string, ModifierGroup[]>();
+
+  for (const link of links ?? []) {
+    const group = groupMap.get(link.group_id);
+    if (!group) continue;
+
+    const list = groupByItemId.get(link.menu_item_id) ?? [];
+    list.push(group);
+    groupByItemId.set(link.menu_item_id, list);
+  }
+
+  for (const list of groupByItemId.values()) {
+    list.sort((a, b) => a.sort_order - b.sort_order);
   }
 
   const categoryMap = new Map<string, MenuCategory>();
   const usedSlugs = new Set<string>();
 
-  for (const row of data) {
+  for (const row of menuRows) {
     const cat = row.categories;
 
     if (!cat) continue;
@@ -56,6 +106,7 @@ export default async function MenuPage() {
       sort_order: row.sort_order,
       is_available: row.is_available,
       description: row.description,
+      modifierGroups: groupByItemId.get(row.id) ?? [],
     });
   }
 

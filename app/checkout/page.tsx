@@ -97,7 +97,12 @@ export default function CheckoutPage() {
           name: trimmedName,
           phone: normalisedPhone,
           email: trimmedEmail,
-          items: items.map(({id, quantity}) => ({ id, quantity })),
+          items: items.map(({id, quantity, selections, selectionLabels }) => ({
+            id, 
+            quantity,
+            selections,
+            selectionLabels,
+          })),
           accessories,
         }),
       });

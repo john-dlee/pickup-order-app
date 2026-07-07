@@ -25,6 +25,7 @@ type OrderItem = {
   item_name: string;
   quantity: number;
   is_accessory: boolean;
+  item_notes: string | null;
 };
 
 function OrderItemsList({ items }: { items: OrderItem[] }) {
@@ -40,7 +41,12 @@ function OrderItemsList({ items }: { items: OrderItem[] }) {
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-bold bg-gray-100">
                 {item.quantity}
               </span>
-              <span>{item.item_name}</span>
+              <span>
+                {item.item_name}
+                {item.item_notes && (
+                  <span className="text-gray-600"> — {item.item_notes}</span>
+                )}
+              </span>
             </li>
           ))}
         </ul>
@@ -97,7 +103,8 @@ export default function AdminOrdersPage() {
         order_items(
           item_name,
           quantity,
-          is_accessory
+          is_accessory,
+          item_notes
         )
       `)
       .eq("payment_status", "paid")
@@ -249,7 +256,10 @@ export default function AdminOrdersPage() {
       {connectionStatus === "offline" && (
         <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p>Connection lost - orders still check every 2 minutes.</p>
-          <Button variant="outline" size="sm" onClick={() => loadOrders()}>
+          <Button variant="outline" size="sm" onClick={() => {
+            loadOrders();
+            setConnectionStatus("live");
+          }}>
             Refresh orders
           </Button>
         </div>

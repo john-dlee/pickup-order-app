@@ -35,6 +35,59 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_sessions: {
+        Row: {
+          accessories: Json
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          expires_at: string
+          id: string
+          items: Json
+          order_id: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          total_cents: number
+        }
+        Insert: {
+          accessories?: Json
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          expires_at?: string
+          id?: string
+          items: Json
+          order_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          total_cents: number
+        }
+        Update: {
+          accessories?: Json
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          order_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          total_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_order_sequences: {
         Row: {
           last_number: number
@@ -49,6 +102,36 @@ export type Database = {
           order_date?: string
         }
         Relationships: []
+      }
+      menu_item_modifier_groups: {
+        Row: {
+          group_id: string
+          menu_item_id: string
+        }
+        Insert: {
+          group_id: string
+          menu_item_id: string
+        }
+        Update: {
+          group_id?: string
+          menu_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_modifier_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_modifier_groups_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_items: {
         Row: {
@@ -93,6 +176,56 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modifier_groups: {
+        Row: {
+          id: string
+          name: string
+          required: boolean
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          required?: boolean
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          required?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      modifier_options: {
+        Row: {
+          group_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifier_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -201,46 +334,40 @@ export type Database = {
       }
       store_hours: {
         Row: {
-          day_of_week: number
-          open_time: string
           close_time: string
+          day_of_week: number
           is_closed: boolean
+          open_time: string
         }
         Insert: {
-          day_of_week: number
-          open_time: string
           close_time: string
+          day_of_week: number
           is_closed?: boolean
+          open_time: string
         }
         Update: {
-          day_of_week?: number
-          open_time?: string
           close_time?: string
+          day_of_week?: number
           is_closed?: boolean
+          open_time?: string
         }
         Relationships: []
       }
       store_settings: {
         Row: {
-          close_time: string
           id: number
           is_busy: boolean
           is_open: boolean
-          open_time: string
         }
         Insert: {
-          close_time?: string
           id?: number
           is_busy?: boolean
           is_open?: boolean
-          open_time?: string
         }
         Update: {
-          close_time?: string
           id?: number
           is_busy?: boolean
           is_open?: boolean
-          open_time?: string
         }
         Relationships: []
       }

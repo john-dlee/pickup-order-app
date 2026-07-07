@@ -9,13 +9,47 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 const supabase = createSupabaseServerClient();
 
-type OrderItemRow = { 
+type OrderItemRow = {
   menu_item_id: string | null;
   item_name: string;
   unit_price_cents: number;
   quantity: number;
   is_accessory: boolean;
+  item_notes: string | null;
 };
+
+type SnapshotItem = {
+  menu_item_id: string;
+  item_name: string;           // from db at checkout time
+  quantity: number;
+  unit_price_cents: number;    // from db at checkout time
+  selections: Record<string, string>;  // {} for plain items
+};
+
+async function resolveItemNotes(
+  selections: Record<string, string>
+): Promise<string | null> {
+  const entries = Object.entries(selections);
+  if (!entries.length) return null;
+
+  const optionIds = entries.map(([, optionId]) => optionId);
+  const groupIds = entries.map(([groupId]) => groupId);
+
+  const [{ data: opts }, { data: grps }] = await Promise.all([
+    supabase.from("modifier_options").select("id, name").in("id", optionIds),
+    supabase.from("modifier_groups").select("id, name").in("id", groupIds),
+  ]);
+
+  if (!opts?.length) return null;
+
+  const parts = entries.map(([groupId, optionId]) => {
+    const groupName = grps?.find((g) => g.id === groupId)?.name ?? "Option";
+    const optionName = opts.find((o) => o.id === optionId)?.name ?? optionId;
+    return `${groupName}: ${optionName}`;
+  });
+
+  return parts.join(", ");
+}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -64,44 +98,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  const { customer_name, customer_phone, items_json, accessories_json } = session.metadata ?? {};
-  
-  if (!customer_name || !customer_phone || !items_json) {
-    console.error("Missing metadata on session", session.id);
-    return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+  const checkoutId = session.metadata?.checkout_id;
+
+  if (!checkoutId) {
+    console.error("Missing checkout_id on session", session.id);
+    return NextResponse.json({ error: "Missing checkout_id" }, { status: 400 });
   }
 
-  const items = JSON.parse(items_json) as { id: string; quantity: number }[];
-  const accessories = JSON.parse(accessories_json ?? "[]") as { id: string; quantity: number }[];
-  
-  // get prices from db, don't trust metadata/client
-  const itemIds = items.map((i) => i.id);
-  const { data: dbItems, error: menuError} = await supabase
-    .from("menu_items")
-    .select("id, name, price_cents, requires_cooking")
-    .in("id", itemIds);
+  const { data: checkout, error: checkoutError } = await supabase
+    .from("checkout_sessions")
+    .select("*")
+    .eq("id", checkoutId)
+    .maybeSingle();
 
-  if (menuError || !dbItems?.length) {
-    console.error("Menu lookup failed", menuError);
-    return NextResponse.json({ error: "Menu lookup failed" }, { status: 500 });
+  if (checkoutError || !checkout) {
+    console.error("Checkout session not found", checkoutId, checkoutError);
+    return NextResponse.json({ error: "Checkout session not found" }, { status: 500 });
   }
+
+  if (checkout.status === "completed") {
+    return NextResponse.json({ received: true });
+  }
+
+  const customer_name = checkout.customer_name;
+  const customer_phone = checkout.customer_phone;
+  const items = checkout.items as SnapshotItem[];
+  const accessories = checkout.accessories as { id: string; quantity: number }[];
 
   for (const item of items) {
-    const dbItem = dbItems.find((d) => d.id === item.id);
-
-    if (!dbItem) {
-      console.error("Menu item missing at fulfillment", item.id);
-      return NextResponse.json({ error: "Menu item not found" }, { status: 500 });
-    }
-
     orderItemRows.push({
-      menu_item_id: dbItem.id,
-      item_name: dbItem.name,
-      unit_price_cents: dbItem.price_cents,
+      menu_item_id: item.menu_item_id,
+      item_name: item.item_name,
+      unit_price_cents: item.unit_price_cents,
       quantity: item.quantity,
       is_accessory: false,
+      item_notes: await resolveItemNotes(item.selections ?? {}),
     });
-    totalCents += dbItem.price_cents * item.quantity;
+    totalCents += item.unit_price_cents * item.quantity;
   }
 
   for (const acc of accessories) {
@@ -118,6 +151,7 @@ export async function POST(request: Request) {
       unit_price_cents: defined.price_cents,
       quantity: acc.quantity,
       is_accessory: true,
+      item_notes: null,
     });
     totalCents += defined.price_cents * acc.quantity;
   }
@@ -171,6 +205,11 @@ export async function POST(request: Request) {
     console.error("Order items insert failed", itemsError);
     return NextResponse.json({ error: "Order items failed" }, { status: 500 });
   }
+
+  await supabase
+    .from("checkout_sessions")
+    .update({ status: "completed", order_id: order.id })
+    .eq("id", checkoutId);
 
   console.log("Created order", order.id, "daily #", dailyNumber);
 
