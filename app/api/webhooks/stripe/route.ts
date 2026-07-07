@@ -166,31 +166,47 @@ export async function POST(request: Request) {
     day: "2-digit",
   }).format(new Date());
   
-  const { data: dailyNumber, error: rpcError } = await supabase.rpc(
-    "next_daily_order_number",
-    { p_date: orderDate}
-  );
-
-  if (rpcError || dailyNumber == null) {
-    console.error("RPC failed", rpcError);
-    return NextResponse.json({ error: "order number failed" }, { status: 500 });
+  let order: { id: string } | null = null;
+  let orderError: unknown = null;
+  const maxInsertAttempts = 3;
+  for (let attempt = 1; attempt <= maxInsertAttempts; attempt++) {
+    const { data: dailyNumber, error: rpcError } = await supabase.rpc(
+      "next_daily_order_number",
+      { p_date: orderDate }
+    );
+    if (rpcError || dailyNumber == null) {
+      console.error("RPC failed", rpcError);
+      return NextResponse.json({ error: "order number failed" }, { status: 500 });
+    }
+    const insertRes = await supabase
+      .from("orders")
+      .insert({
+        customer_name,
+        customer_phone,
+        payment_status: "paid",
+        status: "active",
+        total_cents: totalCents,
+        stripe_checkout_session_id: session.id,
+        order_date: orderDate,
+        daily_order_number: dailyNumber,
+        pickup_at: pickupAt,
+      })
+      .select("id")
+      .single();
+    order = insertRes.data;
+    orderError = insertRes.error;
+    if (!orderError && order) break;
+    const code = (orderError as { code?: string } | null)?.code;
+    const isUniqueConflict = code === "23505";
+    if (!isUniqueConflict) {
+      console.error("Order insert failed", orderError);
+      return NextResponse.json({ error: "Order insert failed" }, { status: 500 });
+    }
+    if (attempt === maxInsertAttempts) {
+      console.error("Order insert failed after retries", orderError);
+      return NextResponse.json({ error: "Order insert failed" }, { status: 500 });
+    }
   }
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      customer_name,
-      customer_phone,
-      payment_status: "paid",
-      status: "active",
-      total_cents: totalCents,
-      stripe_checkout_session_id: session.id,
-      order_date: orderDate,
-      daily_order_number: dailyNumber,
-      pickup_at: pickupAt,
-    })
-    .select("id")
-    .single();
 
   if (orderError || !order) {
     console.error("Order insert failed", orderError);
@@ -211,7 +227,7 @@ export async function POST(request: Request) {
     .update({ status: "completed", order_id: order.id })
     .eq("id", checkoutId);
 
-  console.log("Created order", order.id, "daily #", dailyNumber);
+  console.log("Created order", order.id, "daily #", orderDate);
 
   return NextResponse.json({ received: true });
 }
