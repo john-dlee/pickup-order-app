@@ -8,7 +8,12 @@ import { isStoreOpenNow } from "@/lib/store-hours";
 
 const supabase = createSupabaseServerClient();
 
-type CheckoutItem = { id: string; quantity: number };
+type CheckoutItem = {
+  id: string;
+  quantity: number;
+  selections?: Record<string, string>;
+  selectionLabels?: Record<string, string>;
+};
 type CheckoutAccessory = { id: string; quantity: number };
 type CheckoutBody = {
   name: string;
@@ -16,6 +21,13 @@ type CheckoutBody = {
   email: string;
   items: CheckoutItem[];
   accessories: CheckoutAccessory[];
+};
+type SnapshotItem = {
+  menu_item_id: string;
+  item_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  selections: Record<string, string>;
 };
 
 function isValidEmail(value: string) {
@@ -31,6 +43,11 @@ function toStripeLineItem(name: string, unitAmountCents: number, quantity: numbe
       product_data: { name },
     },
   };
+}
+
+function formatSelectionSummary(labels?: Record<string, string>): string | null {
+  if (!labels || !Object.keys(labels).length) return null;
+  return Object.values(labels).join(", ");
 }
 
 export async function POST(request: Request) {
@@ -129,9 +146,43 @@ export async function POST(request: Request) {
       .select("id, name, price_cents, is_available")
       .in("id", itemIds);
     
+    const { data: links } = await supabase
+      .from("menu_item_modifier_groups")
+      .select("menu_item_id, group_id")
+      .in("menu_item_id", itemIds);
+    
+    const groupIds = [...new Set((links ?? []).map((l) => l.group_id))];
+    
+    const { data: groups } = groupIds.length
+      ? await supabase
+          .from("modifier_groups")
+          .select("id, required")
+          .in("id", groupIds)
+      : { data: [] };
+    
+    const { data: options } = groupIds.length
+      ? await supabase
+          .from("modifier_options")
+          .select("id, group_id")
+          .in("group_id", groupIds)
+      : { data: [] };
+
+    const requiredGroupIds = new Set(groups?.filter((g) => g.required).map((g) => g.id));
+    
+    // menuItemId → required group ids
+    const requiredGroupsByItem = new Map<string, string[]>();
+    for (const link of links ?? []) {
+      if (!requiredGroupIds.has(link.group_id)) continue;
+      const list = requiredGroupsByItem.get(link.menu_item_id) ?? [];
+      list.push(link.group_id);
+      requiredGroupsByItem.set(link.menu_item_id, list);
+    }
+    
     if (error || !dbItems) {
       return NextResponse.json({ error: "Failed to verify menu items"}, { status: 500 });
     }
+
+    const snapshotItems: SnapshotItem[] = [];
 
     for (const clientItem of items) {
       const validItem = dbItems.find((db) => db.id === clientItem.id)
@@ -147,7 +198,55 @@ export async function POST(request: Request) {
       if (clientItem.quantity > 20) {
         return NextResponse.json({ error: "Quantity too high" }, { status: 400 });
       }
-      lineItems.push(toStripeLineItem(validItem.name, validItem.price_cents, clientItem.quantity));
+      
+      const required = requiredGroupsByItem.get(clientItem.id) ?? [];
+      const selections = clientItem.selections ?? {};
+
+      for (const groupId of required) {
+        const optionId = selections[groupId];
+        if (!optionId) {
+          return NextResponse.json(
+            { error: `${validItem.name} requires a base selection` },
+            { status: 400 }
+          );
+        }
+        const validOption = options?.find(
+          (o) => o.id === optionId && o.group_id === groupId
+        );
+        if (!validOption) {
+          return NextResponse.json({ error: "Invalid modifier selection" }, { status: 400 });
+        }
+      }
+
+      // plain items with extra junk selections — reject unknown options
+      for (const [groupId, optionId] of Object.entries(selections)) {
+        const linked = links?.some(
+          (l) => l.menu_item_id === clientItem.id && l.group_id === groupId
+        );
+        if (!linked) {
+          return NextResponse.json({ error: "Invalid modifier selection" }, { status: 400 });
+        }
+        const validOption = options?.find(
+          (o) => o.id === optionId && o.group_id === groupId
+        );
+        if (!validOption) {
+          return NextResponse.json({ error: "Invalid modifier selection" }, { status: 400 });
+        }
+      }
+
+      snapshotItems.push({
+        menu_item_id: validItem.id,
+        item_name: validItem.name,
+        quantity: clientItem.quantity,
+        unit_price_cents: validItem.price_cents,
+        selections: clientItem.selections ?? {},
+      });
+
+
+      const summary = formatSelectionSummary(clientItem.selectionLabels);
+      const stripeName = summary ? `${validItem.name} (${summary})` : validItem.name;
+
+      lineItems.push(toStripeLineItem(stripeName, validItem.price_cents, clientItem.quantity));
     }
     
 
@@ -163,6 +262,25 @@ export async function POST(request: Request) {
     const normalisedPhone = normaliseAuMobile(phone)!;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
+    const { data: checkout, error: checkoutError } = await supabase
+      .from("checkout_sessions")
+      .insert({
+        customer_name: name.trim(),
+        customer_phone: normalisedPhone,
+        customer_email: trimmedEmail,
+        items: snapshotItems,
+        accessories,
+        total_cents: totalCents,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (checkoutError || !checkout) {
+      console.error("checkout_sessions insert failed", checkoutError);
+      return NextResponse.json({ error: "Failed to start checkout" }, { status: 500 });
+    }
+
     const session = await stripe.checkout.sessions.create({
       success_url: `${appUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/checkout`,
@@ -170,18 +288,19 @@ export async function POST(request: Request) {
       mode: "payment",
       customer_email: trimmedEmail,
       metadata: {
-        customer_name: name.trim(),
-        customer_phone: normalisedPhone,
-        items_json: JSON.stringify(items),
-        accessories_json: JSON.stringify(accessories),
-        customer_email: trimmedEmail,
+        checkout_id: checkout.id,
       },
-    })
+    });
     
     if (!session.url) {
       return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
     }
 
+    await supabase
+      .from("checkout_sessions")
+      .update({ stripe_checkout_session_id: session.id })
+      .eq("id", checkout.id);
+      
     return NextResponse.json({ url: session.url });
 
   } catch(err) {

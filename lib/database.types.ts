@@ -62,6 +62,7 @@ export type Database = {
           price_cents: number
           requires_cooking: boolean
           sort_order: number
+          requires_base: boolean
         }
         Insert: {
           category_id: string
