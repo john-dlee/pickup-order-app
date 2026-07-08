@@ -7,6 +7,7 @@ import { getSydneyDateString } from "@/lib/sydney-time";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UNFULFILLED_ALERT_MINUTES } from "@/lib/checkout-constraints";
 
 const supabase = createSupabaseClient();
 
@@ -26,6 +27,14 @@ type OrderItem = {
   quantity: number;
   is_accessory: boolean;
   item_notes: string | null;
+};
+
+type UnfulfilledCheckout = {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  paid_at: string;
+  total_cents: number;
 };
 
 function OrderItemsList({ items }: { items: OrderItem[] }) {
@@ -78,7 +87,11 @@ export default function AdminOrdersPage() {
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "live" | "offline"
   >("connecting");
+  const [unfulfilled, setUnfulfilled] = useState<UnfulfilledCheckout[]>([]);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
+  const seenUnfulfilledIds = useRef(new Set<string>());
+  const isFirstUnfulfilledLoad = useRef(true);
   const seenIds = useRef(new Set<string>());
   const isFirstLoad = useRef(true);
   const soundReadyRef = useRef(false);
@@ -87,6 +100,40 @@ export default function AdminOrdersPage() {
     const audio = new Audio("/sounds/notification.mp3");
     audio.play().catch(() => {});
   }
+
+  const loadUnfulfilled = useCallback(async () => {
+    const cutoff = new Date(
+      Date.now() - UNFULFILLED_ALERT_MINUTES * 60 * 1000
+    ).toISOString();
+  
+    const { data, error } = await supabase
+      .from("checkout_sessions")
+      .select("id, customer_name, customer_phone, paid_at, total_cents")
+      .eq("status", "pending")
+      .not("paid_at", "is", null)
+      .lt("paid_at", cutoff)
+      .order("paid_at", { ascending: true });
+  
+    if (error) {
+      console.error("loadUnfulfilled failed", error);
+      return;
+    }
+  
+    const next = data ?? [];
+  
+    if (isFirstUnfulfilledLoad.current) {
+      next.forEach((row) => seenUnfulfilledIds.current.add(row.id));
+      isFirstUnfulfilledLoad.current = false;
+    } else {
+      for (const row of next) {
+        if (seenUnfulfilledIds.current.has(row.id)) continue;
+        seenUnfulfilledIds.current.add(row.id);
+        if (soundReadyRef.current) notificationSound();
+      }
+    }
+  
+    setUnfulfilled(next);
+  }, []);
 
   const loadOrders = useCallback(async () => {
     const today = getSydneyDateString();
@@ -134,6 +181,44 @@ export default function AdminOrdersPage() {
 
     setTodayOrders(next);
   }, []);
+
+  async function sendToKitchen(checkoutId: string) {
+    setSendingId(checkoutId);
+  
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error("Not logged in");
+        return;
+      }
+  
+      const res = await fetch("/api/admin/fulfill-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ checkout_id: checkoutId }),
+      });
+  
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        console.error("Send to kitchen failed", json);
+        return;
+      }
+  
+      await loadOrders();
+      await loadUnfulfilled();
+    } finally {
+      setSendingId(null);
+    }
+  }
+
+  useEffect(() => {
+    loadUnfulfilled();
+    const id = setInterval(loadUnfulfilled, 60_000);
+    return () => clearInterval(id);
+  }, [loadUnfulfilled]);
 
   useEffect(() => {
     const channel = supabase
@@ -186,6 +271,7 @@ export default function AdminOrdersPage() {
     function onVisibilityChange() {
       if (document.visibilityState === "visible") {
         loadOrders();
+        loadUnfulfilled();
       }
     }
 
@@ -253,11 +339,48 @@ export default function AdminOrdersPage() {
 
   return (
     <main className="w-full border rounded-xl">
+      {unfulfilled.length > 0 && (
+        <div className="border-b border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">
+            Paid but not in kitchen ({unfulfilled.length})
+          </p>
+          <ul className="mt-2 space-y-2">
+            {unfulfilled.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-3 text-sm"
+              >
+                <div>
+                  <span className="font-medium">{row.customer_name}</span>
+                  {" · "}
+                  <span>{formatPhone(row.customer_phone)}</span>
+                  {" · "}
+                  <span className="text-gray-600">
+                    paid {formatTime(row.paid_at)}
+                  </span>
+                  {" · "}
+                  <span className="text-gray-600">
+                    ${(row.total_cents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={sendingId === row.id}
+                  onClick={() => sendToKitchen(row.id)}
+                >
+                  {sendingId === row.id ? "Sending…" : "Send to kitchen"}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {connectionStatus === "offline" && (
         <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p>Connection lost - orders still check every 2 minutes.</p>
           <Button variant="outline" size="sm" onClick={() => {
             loadOrders();
+            loadUnfulfilled();
             setConnectionStatus("live");
           }}>
             Refresh orders
