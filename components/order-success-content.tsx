@@ -20,6 +20,13 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
     let id: ReturnType<typeof setInterval>;
     const maxAttempts = 20;
 
+    // Record payment time for unfulfilled alerts (fire-and-forget)
+    fetch("/api/checkout/mark-paid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId }),
+    }).catch(() => {});
+
     async function load() {
       attempts++;
 
@@ -58,7 +65,7 @@ export function OrderSuccessContent({ sessionId }: { sessionId: string }) {
         <h1 className="text-xl font-bold">Payment received</h1>
         <p className="mt-2 text-sm text-gray-600">
           {timedOut
-            ? "Still confirming… try refreshing the page."
+            ? "Payment received. If your order number doesn't appear in a minute, show this screen or your email receipt at the counter."
             : "Confirming your order…"}
         </p>
       </main>
