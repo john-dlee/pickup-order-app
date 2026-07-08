@@ -3,53 +3,12 @@ import { stripe } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ACCESSORIES } from "@/lib/accessories";
+import { fulfillCheckoutSession, type SnapshotItem } from "@/lib/fulfill-checkout";
+import { STALE_CHECKOUT_MINUTES } from "@/lib/checkout-constraints";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 const supabase = createSupabaseServerClient();
-
-type OrderItemRow = {
-  menu_item_id: string | null;
-  item_name: string;
-  unit_price_cents: number;
-  quantity: number;
-  is_accessory: boolean;
-  item_notes: string | null;
-};
-
-type SnapshotItem = {
-  menu_item_id: string;
-  item_name: string;           // from db at checkout time
-  quantity: number;
-  unit_price_cents: number;    // from db at checkout time
-  selections: Record<string, string>;  // {} for plain items
-};
-
-async function resolveItemNotes(
-  selections: Record<string, string>
-): Promise<string | null> {
-  const entries = Object.entries(selections);
-  if (!entries.length) return null;
-
-  const optionIds = entries.map(([, optionId]) => optionId);
-  const groupIds = entries.map(([groupId]) => groupId);
-
-  const [{ data: opts }, { data: grps }] = await Promise.all([
-    supabase.from("modifier_options").select("id, name").in("id", optionIds),
-    supabase.from("modifier_groups").select("id, name").in("id", groupIds),
-  ]);
-
-  if (!opts?.length) return null;
-
-  const parts = entries.map(([groupId, optionId]) => {
-    const groupName = grps?.find((g) => g.id === groupId)?.name ?? "Option";
-    const optionName = opts.find((o) => o.id === optionId)?.name ?? optionId;
-    return `${groupName}: ${optionName}`;
-  });
-
-  return parts.join(", ");
-}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -82,9 +41,6 @@ export async function POST(request: Request) {
   if (session.payment_status !== "paid") {
     return NextResponse.json({ received: true });
   }
-
-  const orderItemRows: OrderItemRow[] = [];
-  let totalCents = 0;
 
   // Idempotency — Stripe may resend the same event; one session = one order
   const { data: existing } = await supabase
@@ -120,114 +76,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  const customer_name = checkout.customer_name;
-  const customer_phone = checkout.customer_phone;
-  const items = checkout.items as SnapshotItem[];
-  const accessories = checkout.accessories as { id: string; quantity: number }[];
+  const ageMinutes = (Date.now() - new Date(checkout.created_at).getTime()) / (1000 * 60);
 
-  for (const item of items) {
-    orderItemRows.push({
-      menu_item_id: item.menu_item_id,
-      item_name: item.item_name,
-      unit_price_cents: item.unit_price_cents,
-      quantity: item.quantity,
-      is_accessory: false,
-      item_notes: await resolveItemNotes(item.selections ?? {}),
-    });
-    totalCents += item.unit_price_cents * item.quantity;
-  }
-
-  for (const acc of accessories) {
-    const defined = ACCESSORIES.find((a) => a.id === acc.id);
-
-    if (!defined) {
-      console.error("Accessory item missing at fulfillment", acc.id);
-      return NextResponse.json({ error: "Accessory item not found" }, { status: 500 });
-    }
-
-    orderItemRows.push({
-      menu_item_id: null,
-      item_name: defined.name,
-      unit_price_cents: defined.price_cents,
-      quantity: acc.quantity,
-      is_accessory: true,
-      item_notes: null,
-    });
-    totalCents += defined.price_cents * acc.quantity;
-  }
-
-  const readyMinutes = 15;
-  const pickupAt = new Date(Date.now() + readyMinutes * 60 * 1000).toISOString();
-
-  const orderDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Sydney",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  
-  let order: { id: string } | null = null;
-  let orderError: unknown = null;
-  const maxInsertAttempts = 3;
-  for (let attempt = 1; attempt <= maxInsertAttempts; attempt++) {
-    const { data: dailyNumber, error: rpcError } = await supabase.rpc(
-      "next_daily_order_number",
-      { p_date: orderDate }
-    );
-    if (rpcError || dailyNumber == null) {
-      console.error("RPC failed", rpcError);
-      return NextResponse.json({ error: "order number failed" }, { status: 500 });
-    }
-    const insertRes = await supabase
-      .from("orders")
-      .insert({
-        customer_name,
-        customer_phone,
-        payment_status: "paid",
-        status: "active",
-        total_cents: totalCents,
-        stripe_checkout_session_id: session.id,
-        order_date: orderDate,
-        daily_order_number: dailyNumber,
-        pickup_at: pickupAt,
+  if (ageMinutes > STALE_CHECKOUT_MINUTES) {
+    await supabase
+      .from("checkout_sessions")
+      .update({
+        status: "needs_review",
+        review_reason: `webhook delayed ${Math.floor(ageMinutes)}m`,
       })
-      .select("id")
-      .single();
-    order = insertRes.data;
-    orderError = insertRes.error;
-    if (!orderError && order) break;
-    const code = (orderError as { code?: string } | null)?.code;
-    const isUniqueConflict = code === "23505";
-    if (!isUniqueConflict) {
-      console.error("Order insert failed", orderError);
-      return NextResponse.json({ error: "Order insert failed" }, { status: 500 });
-    }
-    if (attempt === maxInsertAttempts) {
-      console.error("Order insert failed after retries", orderError);
-      return NextResponse.json({ error: "Order insert failed" }, { status: 500 });
-    }
+      .eq("id", checkoutId);
+
+    console.log("Stale checkout, needs review", checkoutId);
+    return NextResponse.json({ received: true });
   }
 
-  if (orderError || !order) {
-    console.error("Order insert failed", orderError);
-    return NextResponse.json({ error: "Order insert failed" }, { status: 500 });
+  const result = await fulfillCheckoutSession({
+    checkout: {
+      id: checkout.id,
+      customer_name: checkout.customer_name,
+      customer_phone: checkout.customer_phone,
+      items: checkout.items as SnapshotItem[],
+      accessories: checkout.accessories as { id: string; quantity: number }[],
+    },
+    stripeSessionId: session.id,
+  });
+
+  if ("error" in result) {
+    console.error("Fulfillment failed", result.error, checkoutId);
+    return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    orderItemRows.map((row) => ({ ...row, order_id: order.id }))
-  );
-
-  if (itemsError) {
-    console.error("Order items insert failed", itemsError);
-    return NextResponse.json({ error: "Order items failed" }, { status: 500 });
-  }
-
-  await supabase
-    .from("checkout_sessions")
-    .update({ status: "completed", order_id: order.id })
-    .eq("id", checkoutId);
-
-  console.log("Created order", order.id, "daily #", orderDate);
-
+  console.log("Created order", result.orderId);
   return NextResponse.json({ received: true });
 }

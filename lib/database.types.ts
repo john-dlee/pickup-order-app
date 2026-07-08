@@ -46,6 +46,8 @@ export type Database = {
           id: string
           items: Json
           order_id: string | null
+          paid_at: string | null
+          review_reason: string | null
           status: string
           stripe_checkout_session_id: string | null
           total_cents: number
@@ -60,6 +62,8 @@ export type Database = {
           id?: string
           items: Json
           order_id?: string | null
+          paid_at?: string | null
+          review_reason?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           total_cents: number
@@ -74,6 +78,8 @@ export type Database = {
           id?: string
           items?: Json
           order_id?: string | null
+          paid_at?: string | null
+          review_reason?: string | null
           status?: string
           stripe_checkout_session_id?: string | null
           total_cents?: number
