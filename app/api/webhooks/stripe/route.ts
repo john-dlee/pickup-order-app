@@ -76,6 +76,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
+  if (checkout.status === "expired") {
+    console.log("Checkout dismissed/expired, skipping fulfill", checkoutId);
+    return NextResponse.json({ received: true });
+  }
+
   const ageMinutes = (Date.now() - new Date(checkout.created_at).getTime()) / (1000 * 60);
 
   if (ageMinutes > STALE_CHECKOUT_MINUTES) {
