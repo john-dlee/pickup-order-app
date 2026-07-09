@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UNFULFILLED_ALERT_MINUTES } from "@/lib/checkout-constraints";
+import { formatDisplayPrice } from "@/lib/utils";
 
 const supabase = createSupabaseClient();
 
@@ -182,6 +183,26 @@ export default function AdminOrdersPage() {
     setTodayOrders(next);
   }, []);
 
+  async function dismissCheckout(checkoutId: string) {
+    if (!window.confirm("Mark as handled without sending to kitchen?")) return;
+  
+    const { error } = await supabase
+      .from("checkout_sessions")
+      .update(
+        {
+          status: "expired",
+          review_reason: "dismissed by kitchen",
+        }
+      )
+      .eq("id", checkoutId);
+
+    if (error) {
+      console.error("Dismiss failed", error);
+      return;
+    }
+    await loadUnfulfilled();
+  }
+
   async function sendToKitchen(checkoutId: string) {
     setSendingId(checkoutId);
   
@@ -348,7 +369,7 @@ export default function AdminOrdersPage() {
             {unfulfilled.map((row) => (
               <li
                 key={row.id}
-                className="flex flex-wrap items-center justify-between gap-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 text-sm border border-amber-300 rounded-md p-2"
               >
                 <div>
                   <span className="font-medium">{row.customer_name}</span>
@@ -360,16 +381,26 @@ export default function AdminOrdersPage() {
                   </span>
                   {" · "}
                   <span className="text-gray-600">
-                    ${(row.total_cents / 100).toFixed(2)}
+                    {formatDisplayPrice(row.total_cents)}
                   </span>
                 </div>
-                <Button
-                  size="sm"
-                  disabled={sendingId === row.id}
-                  onClick={() => sendToKitchen(row.id)}
-                >
-                  {sendingId === row.id ? "Sending…" : "Send to kitchen"}
-                </Button>
+                <div className="flex gap-2 items-center">
+                  <Button
+                    size="sm"
+                    disabled={sendingId === row.id}
+                    className="bg-[#A61C2E] font-semibold"
+                    onClick={() => sendToKitchen(row.id)}
+                  >
+                    {sendingId === row.id ? "Sending…" : "Send to kitchen"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => dismissCheckout(row.id)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -392,7 +423,12 @@ export default function AdminOrdersPage() {
         <div className="flex items-center gap-3">
           {!soundReady && (
             <div className="">
-              <Button onClick={enableSound}>Sound on</Button>
+              <Button 
+               className="bg-[#A61C2E]"
+                onClick={enableSound}
+              >
+                Sound on
+              </Button>
             </div>
           )}
           <Link href="/admin/menu" className="text-sm text-gray-600 underline">

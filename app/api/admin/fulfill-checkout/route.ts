@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fulfillCheckoutSession, type SnapshotItem } from "@/lib/fulfill-checkout";
 import { Database } from "@/lib/database.types";
-import { error } from "console";
 
 const supabaseAdmin = createSupabaseServerClient();
 
@@ -89,6 +88,6 @@ export async function POST(request: Request) {
     console.error("Manual fulfill failed", result.error, checkoutId);
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
-  
+
   return NextResponse.json({ ok: true, order_id: result.orderId });
 }
