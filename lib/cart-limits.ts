@@ -1,1 +1,1 @@
-export const MAX_DISTINCT_MENU_ITEMS = 8;
+export const MAX_DISTINCT_MENU_ITEMS = 12;
