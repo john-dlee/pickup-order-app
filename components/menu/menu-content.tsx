@@ -10,6 +10,7 @@ import { scrollToSection } from "@/lib/scroll-to-section";
 import { useActiveCategory } from "@/app/hooks/use-active-category";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { formatWeeklyHours, isStoreOpenNow } from "@/lib/store-hours";
+import { Footer } from "@/components/footer";
 
 const supabase = createSupabaseClient();
 
@@ -116,7 +117,7 @@ export function MenuContent({ categories }: Props) {
 
   const activeSlug = pinnedSlug ?? spySlug;
   return (
-    <div className="min-h-screen pb-12">
+    <div className="min-h-screen pb-16">
       <MenuHero />
       {showClosedBanner && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
@@ -143,7 +144,7 @@ export function MenuContent({ categories }: Props) {
         activeSlug={activeSlug}
         onCategorySelect={handleCategorySelect} 
       />
-      <main className="pb-4">
+      <main>
         {categories.map((cat) => (
           <section 
             key={cat.id} 
@@ -171,6 +172,7 @@ export function MenuContent({ categories }: Props) {
         open={sheetOpen}
         onOpenChange={handleSheetOpenChange}
       />
+      <Footer />
     </div>
   );
 }

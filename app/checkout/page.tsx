@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { normaliseAuMobile } from "@/lib/phone";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { isStoreOpenNow } from "@/lib/store-hours";
+import { Footer } from "@/components/footer";
 
 const supabase = createSupabaseClient();
 
@@ -128,7 +129,7 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-md mx-auto min-h-screen bg-white text-black font-sans shadow-lg">
       <PickupHeader backHref="/cart" />
-      <main className="pb-52">
+      <main>
         <div className="bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900 border-b border-gray-200">
           We start preparing as soon as you pay. Estimated ready in <span className="font-bold">5-15 minutes.</span>
         </div>
@@ -175,6 +176,10 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
+      
+      <div className="fixed inset-x-0 bottom-[9rem] z-40 mx-auto max-w-md bg-white">
+        <Footer />
+      </div>
       <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-4 shadow-lg">
         <div className="flex justify-between mb-1 pt-4 font-bold text-lg">
           <span>Total</span>
