@@ -1,2 +1,2 @@
-export const UNFULFILLED_ALERT_MINUTES = 1;
+export const UNFULFILLED_ALERT_MINUTES = 3;
 export const STALE_CHECKOUT_MINUTES = 10;
