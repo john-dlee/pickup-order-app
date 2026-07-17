@@ -11,7 +11,7 @@ const quicksand = Quicksand({
 
 export const metadata: Metadata = {
   title: "Sapporo Pickup",
-  description: "Order online for pickup at Macarthur Square Sapporo Sushi",
+  description: "Order online for pickup at Macarthur Square Sushi Sapporo",
 };
 
 export default function RootLayout({
