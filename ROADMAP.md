@@ -26,3 +26,5 @@
 - [ ] SMS/pickup notification when order marked ready
 - [ ] Customer order status page (`/order/[id]`) without login
 - [ ] Admin refunds button (Stripe Refund API + kitchen cancel flow)
+- [ ] Kitchen: poll orders only when Realtime is offline; pause polls when tab hidden / store closed
+- [ ] Success page: backoff instead of fixed 3s poll
