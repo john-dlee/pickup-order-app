@@ -79,6 +79,10 @@ export default function PoliciesPage() {
             Your order was paid for but did not appear in our kitchen system, resulting
             in your order not being prepared or fulfilled.
           </li>
+          <li>
+            Your order was paid for but one or more items were unavailable due to
+            insufficient stock, resulting in your order not being prepared or fulfilled.
+          </li>
         </ul>
         <p>
           How to request a refund: Contact us or ask staff at the counter with your
