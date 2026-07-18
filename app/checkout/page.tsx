@@ -177,7 +177,7 @@ export default function CheckoutPage() {
         </div>
       </main>
       
-      <div className="fixed inset-x-0 bottom-[9rem] z-40 mx-auto max-w-md bg-white">
+      <div className="fixed inset-x-0 bottom-[11rem] z-40 mx-auto max-w-md bg-white">
         <Footer />
       </div>
       <div className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-gray-200 bg-white px-4 pb-4 shadow-lg">
