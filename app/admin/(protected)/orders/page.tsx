@@ -96,10 +96,12 @@ export default function AdminOrdersPage() {
   const seenIds = useRef(new Set<string>());
   const isFirstLoad = useRef(true);
   const soundReadyRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   function notificationSound() {
-    const audio = new Audio("/sounds/notification.mp3");
-    audio.play().catch(() => {});
+    if (!audioRef.current || !soundReadyRef.current) return;
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(() => {});
   }
 
   const loadUnfulfilled = useCallback(async () => {
@@ -301,8 +303,10 @@ export default function AdminOrdersPage() {
   }, [loadOrders]);
 
   function enableSound() {
-    const audio = new Audio("/sounds/notification.mp3");
-    audio
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/sounds/notification.mp3");
+    }
+    audioRef.current
       .play()
       .then(() => {
         soundReadyRef.current = true;
